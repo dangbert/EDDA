@@ -1,0 +1,83 @@
+---
+title: "Assignment 0: Practicing R"
+output: pdf_document
+---
+
+## Exercise 1
+
+Practicing working with normal distributions.
+
+**Part (a):**
+
+> Generate two samples of sizes 100 and 100000 from a standard normal distribution. Make histograms\
+> and QQ-plots, compute the means and standard deviations of the both samples. Explain your findings
+
+**Part (b) and (c):**
+
+> For a standard normal distribution, compute the following 3 probabilities: that an arbitrary outcome\
+> is smaller than 2, that it is bigger then -0.5 and that it is between -1 and 2.\
+> \
+> Can you verify the outcomes of b) using only the data from a)?
+
+```{r}
+
+part1 = function(mean=0, sd=1) {
+  s1 = rnorm(100, mean=mean, sd=sd)
+  s2 = rnorm(100000, mean=mean, sd=sd)
+  
+  # make histograms
+  hist(s1, freq=F)
+  hist(s2, freq=F)
+
+  # make qqplots to verify samples appear to come from norm. dist.
+   #dist = function(x, mean, sd) {
+   #  return rnorm(x, mean=mean, sd=sd)
+   #}
+  
+  # making qplot against std. norm. dist.
+  qqnorm(s1)
+  abline(0, 1, col = 'red')
+  qqnorm(s2)
+  abline(0, 1, col = 'red')
+  
+  prob1 = pnorm(-0.5)
+  print(sprintf("prob (x < -0.5) = %.4f", prob1))
+  
+  prob2 = pnorm(2) - pnorm(-1)
+  print(sprintf("prob (-1 < x < 2) = %.4f", prob2))
+  
+  # note that qnorm does the opposite:
+  #  qnorm(pnorm(-0.5)) = -0.5
+  
+  # estimate these probabilities using data from samples:
+  est1a = sum(s1 < -0.5) / length(s1)
+  est1b = sum(s2 < -0.5) / length(s2)
+  print(sprintf("estimate 1a: %.4f, estimate1b: %.4f", est1a, est1b))
+  
+  est2a = (sum(s1 < 2) - sum(s1 < -1)) / length(s1)
+  est2b = (sum(s2 < 2) - sum(s2 < -1)) / length(s2)
+  print(sprintf("estimate 2a: %.4f, estimate2b: %.4f", est2a, est2b))
+}
+
+part1()
+
+# generate two samples from std. norm. dist.
+```
+
+The findings suggest that as expected, both samples appear to come from the standard normal distribution. The bell shaped curves of the histograms, as well as the straight line in the QQ plots provide evidence for this.\
+
+**Part (d):\
+**
+
+> Repeat a) and b) for a normal distribution with mean=3 and sd=2. Find also the value such that 95% of the outcomes are smaller than that value.
+
+```{r}
+
+part1(mean=2, sd=3)
+
+# TODO: compute 95% confidence interval
+```
+
+In this case, the qqplots suggest that the samples have the shape of a normal distribution, but aren't from the standard normal distribution (otherwise the scatter plot would align nicely with \tex{$y=x$} (shown as a red line).
+
+## Exercise 2
