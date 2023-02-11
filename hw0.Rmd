@@ -3,7 +3,7 @@ title: "Assignment 0: Practicing R"
 output: pdf_document
 ---
 
-## Exercise 1
+## Exercise 1: Normal Dist. in R
 
 Practicing working with normal distributions.
 
@@ -22,7 +22,7 @@ Practicing working with normal distributions.
 ```{r}
 
 part1 = function(mean=0, sd=1) {
-  par(mfrow=c(2,2))
+  par(mfrow=c(2,2)) # tile graphs
   s1 = rnorm(100, mean=mean, sd=sd)
   s2 = rnorm(100000, mean=mean, sd=sd)
   
@@ -89,7 +89,7 @@ sqrt(var(s1))))
 
 In this case, the qqplots suggest that the samples have the shape of a normal distribution, but aren't from the standard normal distribution. Otherwise the scatter plot would align nicely with \$y=x\$, (shown as a red line).
 
-## Exercise 2
+## Exercise 2: Generating Samples/Plots
 
 [reference: custom qqplots](https://www.christopherlovell.co.uk/blog/2016/05/14/lognormal-fit-QQ-R.html)
 
@@ -99,12 +99,13 @@ par(mfrow=c(1,3))
 
 ######## log norm sample:
 s1 = rlnorm(10000, meanlog=2, sdlog=2)
-hist(s1, freq=F, breaks=seq(0, max(s1), length=10), main="Hist. of Log Norm. Sample")
-
-### custom qplot:
+#hist(s1, freq=F, breaks=seq(0, max(s1), length=10), main="Hist. of Log Norm. Sample")
+hist(s1, freq=F, main="Hist. of Log Norm. Sample")
+## custom qplot:
 # select quantiles
 quants = seq(0,1,length=100)
-ref_quants = qlnorm(quants, meanlog=2, sdlog=3) # theoretical values for each quantile 
+quants = quants[1:length(quants)-1] # omit 1.0 as that gets a value of inf in dist.
+ref_quants = qlnorm(quants, meanlog=2, sdlog=2) # theoretical values for each quantile 
 act_quants = quantile(s1, quants) # actual values in sample
 plot(act_quants, ref_quants, xlab="Theoretical Quantiles", ylab="Sample Quantiles")
 abline(0, 1, col = 'red')
@@ -150,3 +151,85 @@ abline(0, 1, col = 'red')
 title(main="Poisson Q-Q Plot")
 boxplot(s4); title(main="Poisson Boxplot")
 ```
+
+## Exercise 3: Summarizing Data
+
+```{r, fig.width=7, height=5, units="in"}
+
+data = read.table("mortality.txt", header=T)
+#data
+
+describe = function(d, title) {
+  writeLines(sprintf("\n%s:", title))
+  par(mfrow=c(2,2)) # tile graphs
+  boxplot(d); title(main=title)
+  hist(d, main=title)
+  qqnorm(d)
+  print(summary(d))
+  print(sprintf("sd=%.4f", sd(d)))
+}
+
+teenTitle = "Teen Birth Rate (Per 1k)"
+describe(data$teen, teenTitle)
+mortTitle = "Infant Mort Rate (Per 1k)"
+describe(data$mort, mortTitle)
+
+par(mfrow=c(2,2))
+plot(data$teen, data$mort, xlab=teenTitle, ylab=mortTitle, main="Comparison")
+
+# plot line of best fit (linear model)
+abline(lm(data$mort ~ data$teen))
+corCoef = cor(data$mort, data$teen)
+print(sprintf("correlation coefiicient =%.4f", corCoef))
+
+```
+
+Teen birth rate and infant mortality rates both appear to be approximately normally distributed.
+
+Teen birth rate and infant mortality appear to (roughly) have a linear relationship, although the correlation coefficient is only 0.549.
+
+## Exercise 4: P-values of the (2 sample) t-test
+
+```{r}
+
+part4 = function(m, n, mu, nu, sd) {
+  par(mfrow=c(1, 3))
+  x = rnorm(n, mu, sd)
+  y = rnorm(n, nu, sd)
+  hist(x, main="Histogram of x (single trial)")
+  hist(y, main="Histogram of y (single trial)")
+  #t.test()
+  # do 2 sample t test (and treat the variances as equal)
+  #res = t.test(x, y, var.equal=T)
+  #print(sprintf("single t-test result has p-value %.4f", res[[3]]))
+  
+  
+  # estimate power of t-test:
+  B = 10000
+  p = numeric(B)
+  for (b in 1:B) {
+    x = rnorm(n, mu, sd)
+    y = rnorm(n, nu, sd)
+    res = t.test(x, y, var.equal=T, alternative="two.sided")
+    p[b] = res[[3]]
+  }
+  power = mean(p < 0.05) # ratio of p-values < 0.05
+  # calculate true power:
+  truePower = power.t.test(n=n, sd=sd, delta=abs(mu-nu), type="two.sample", alternative="two.sided")
+  # TODO: why is the "true" power off by a factor of 2?
+  print(sprintf("estimated power = %.4f (using %d trials) , true power = %.4f", power, B, truePower$power))
+  print(truePower)
+ #browser() # breakpoint
+  
+  #par(mfrow=c(1, 1))
+  hist(p, freq=F, main=sprintf("Dist. of P-Values (%d trials)", B))
+}
+
+part4(30, 30, 180, 180, 10)
+part4(30, 30, 180, 175, 6)
+
+```
+
+The findings for part (b) suggest that the statistical power is only about 0.05. Meaning there's a 5% chance of rejecting the $H_0$. This is to be expected, because in this case the $H_0$ is correct ($x$ and $y$ come from the same distribution), and with a significance-level of 0.05, the statistical power when $H_0$ is correct should be 0.05 as well.
+
+The findings for part (c) indicate the statistical power for this scenario is around 0.90, which means there's a 90% chance of (correctly) rejecting $H_0$ (as in this case the null hypothesis that $x$ and $y$ come from the same distributions is incorrect). This is a good sign, as we expect it to be easy to identify the distributions are different (given the large sample size of 1000).
