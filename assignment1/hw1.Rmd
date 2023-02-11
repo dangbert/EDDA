@@ -1,0 +1,42 @@
+---
+title: "Assignment template"
+author: "Group 45: Daniel Engbert, Rik Timmer, Koen van der Pool"
+date: "11 February 2023"
+output: pdf_document
+fontsize: 11pt
+highlight: tango
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## Exercise 1: Birthweights
+
+<!--# See template_assign_edda.Rmd for full tips and info for formatting this document -->
+
+```{r}
+data = read.table("birthweight.txt", header=T)
+data
+```
+
+## Exercise 2: Cholesterol
+
+```{r,echo=FALSE,fig.height=3.5}
+data = read.table("cholesterol.txt", header=T)
+data
+```
+
+## Exercise 3: Diet
+
+```{r}
+data = read.table("diet.txt", header=T)
+data
+```
+
+## Exercise 4: Yield of Peas
+
+```{r}
+library(MASS)
+data = npk
+data
+```
