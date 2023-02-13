@@ -52,7 +52,38 @@ distribution have total area 0.04). Our calculations compute \$n =
 832.32\$, which rounded indicates the min sample size is $n=833$ (for a
 96% CI).
 
-TODO: see slide 9 for bootstrap CI code
+```{r}
+x = data$birthweight
+B = 10000
+Tstar = numeric(B)
+
+for (i in 1:B){
+  # sample with replacement, for a new sample of same length(x)
+  Xstar = sample(x, replace=TRUE)
+  Tstar[i] = mean(Xstar) 
+}
+
+Tstar02 = quantile(Tstar, 0.02)
+Tstar04 = quantile(Tstar, 0.98)
+Tstar02
+Tstar04
+
+```
+
+Our bootstrap CI of 96% is $[2810.32, 3014.50]$ which is approximately
+consistent with the CI calculated previously (as expected).
+
+**b)**
+
+Use wilcoxon sign test?
+
+```{r}
+
+```
+
+discuss results here...
+
+**c)**
 
 ## Exercise 2: Cholesterol
 
