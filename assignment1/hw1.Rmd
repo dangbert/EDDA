@@ -16,8 +16,43 @@ editor_options:
 
 ```{r}
 data = read.table("birthweight.txt", header=T)
+par(mfrow=c(1,2))
 data
+# checking normality
+hist(data$birthweight, freq=F)
+qqnorm(data$birthweight)
+shapiro.test(data$birthweight)
+
+res = t.test(data$birthweight, conf.level=0.96)
+res
+sd(data$birthweight)
+
+tval = qt(0.98, length(data$birthweight))
+m = 50
+n = (tval * sd(data$birthweight) / m) ** 2
+n
+#sprintf("96% confidence interval: [%.4f, %.4f]", res$conf.int[1], res$conf.int[2])
+
 ```
+
+**a)**
+
+The birthweight data appears to be normal based on a normal-appearing
+histogram, the straight line in the qqplot, and the shapiro-wilk
+normality test (having \$p=0.8995 \> 0.05\$).
+
+$$
+m = \frac{t*s}{\sqrt{n}} \rightarrow n = (\frac{t * s}{m})^2
+$$
+
+The equation above, gives the sample size, \$n\$, needed for the
+confidence interval to have a width of 100 (meaning \$m=50\$), where $t$
+is the t-score for the quantile 0.02 (such that both tails of the
+distribution have total area 0.04). Our calculations compute \$n =
+832.32\$, which rounded indicates the min sample size is $n=833$ (for a
+96% CI).
+
+TODO: see slide 9 for bootstrap CI code
 
 ## Exercise 2: Cholesterol
 
