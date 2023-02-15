@@ -96,16 +96,9 @@ As we previously determined, the data is approximately normally distributed, and
 
 ```{r}
 pnorm(2600, mean = mean(x), sd=sd(x))
-qnorm(pnorm(2600, mean = mean(x), sd=sd(x)))
-
-
 
 sd(x)
-std_test = -0.4491648 * 697.5002
-mean_test = mean(x) + std_test
-mean_test
-
-t.test(x, mu=2600, alt="l")
+mean(x)
 
 ```
 
