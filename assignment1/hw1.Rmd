@@ -17,19 +17,19 @@ editor_options:
 ```{r}
 data = read.table("birthweight.txt", header=T)
 par(mfrow=c(1,2))
-data
+x = data$birthweight
 # checking normality
-hist(data$birthweight, freq=F)
-qqnorm(data$birthweight)
-shapiro.test(data$birthweight)
+hist(x, freq=F)
+qqnorm(x)
+shapiro.test(x)
 
-res = t.test(data$birthweight, conf.level=0.96)
+res = t.test(x, conf.level=0.96)
 res
-sd(data$birthweight)
+sd(x)
 
-tval = qt(0.98, length(data$birthweight))
+tval = qt(0.98, length(x))
 m = 50
-n = (tval * sd(data$birthweight) / m) ** 2
+n = (tval * sd(x) / m) ** 2
 n
 #sprintf("96% confidence interval: [%.4f, %.4f]", res$conf.int[1], res$conf.int[2])
 
@@ -53,7 +53,6 @@ distribution have total area 0.04). Our calculations compute \$n =
 96% CI).
 
 ```{r}
-x = data$birthweight
 B = 10000
 Tstar = numeric(B)
 
@@ -75,17 +74,40 @@ consistent with the CI calculated previously (as expected).
 
 **b)**
 
-Test change
+
 
 Use wilcoxon sign test?
 
 ```{r}
-
+t.test(x, mu=2800, alt="g")[[4]]
 ```
 
-discuss results here...
+The output of the confidence interval here denotes that we can say with 95% confidence that the true mean is between `r t.test(x, mu=2800, alt="g")[[4]]`.
+
+```{r}
+wilcox.test(x, mu=2800, alt="g")
+```
+
+As we previously determined, the data is approximately normally distributed, and symmetric. Therefore the difference between the mean and median is minimal, and we can use a Wilcoxon signed rank test for one sample.
 
 **c)**
+
+**d)**
+
+```{r}
+pnorm(2600, mean = mean(x), sd=sd(x))
+qnorm(pnorm(2600, mean = mean(x), sd=sd(x)))
+
+
+
+sd(x)
+std_test = -0.4491648 * 697.5002
+mean_test = mean(x) + std_test
+mean_test
+
+t.test(x, mu=2600, alt="l")
+
+```
 
 ## Exercise 2: Cholesterol
 
