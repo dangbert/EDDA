@@ -1,6 +1,6 @@
 ---
-title: "Assignment template"
-author: "Group 45: Daniel Engbert, Rik Timmer, Koen van der Pool"
+title: "Assignment 1: Group 45"
+author: "Daniel Engbert, Rik Timmer, Koen van der Pool"
 date: "11 February 2023"
 output: pdf_document
 fontsize: 11pt
@@ -14,48 +14,49 @@ editor_options:
 
 <!--# See template_assign_edda.Rmd for full tips and info for formatting this document -->
 
+**a)**
+
+<!--# print(sprintf("96%% confidence interval: [%.4f, %.4f]", res$conf.int[1], res$conf.int[2])) -->
+
 ```{r}
 data = read.table("birthweight.txt", header=T)
 par(mfrow=c(1,2))
+# use x as alias for the dataset
 x = data$birthweight
+
 # checking normality
 hist(x, freq=F)
 qqnorm(x)
 shapiro.test(x)
 
-res = t.test(x, conf.level=0.96)
-res
-sd(x)
+t.test(x, conf.level=0.96)
 
+# calculate min sample size needed
 tval = qt(0.98, length(x))
 m = 50
 n = (tval * sd(x) / m) ** 2
-n
-#sprintf("96% confidence interval: [%.4f, %.4f]", res$conf.int[1], res$conf.int[2])
+print(sprintf("min sample size, n = %.2f", n))
 
 ```
 
-**a)**
-
 The birthweight data appears to be normal based on a normal-appearing
 histogram, the straight line in the qqplot, and the shapiro-wilk
-normality test (having \$p=0.8995 \> 0.05\$).
+normality test (having $p=0.8995 > 0.05$).
 
 $$
 m = \frac{t*s}{\sqrt{n}} \rightarrow n = (\frac{t * s}{m})^2
 $$
 
-The equation above, gives the sample size, \$n\$, needed for the
-confidence interval to have a width of 100 (meaning \$m=50\$), where $t$
+The equation above, gives the sample size, $n$, needed for the
+confidence interval to have a width of 100 (meaning $m=50$), where $t$
 is the t-score for the quantile 0.02 (such that both tails of the
-distribution have total area 0.04). Our calculations compute \$n =
-832.32\$, which rounded indicates the min sample size is $n=833$ (for a
-96% CI).
+distribution have total area $1-0.96=0.04$). Our R code above computes
+$n = 832.32$, which rounded up indicates the min sample size is $n=833$
+(for a 96% CI of length at most 100).
 
 ```{r}
 B = 10000
 Tstar = numeric(B)
-
 for (i in 1:B){
   # sample with replacement, for a new sample of same length(x)
   Xstar = sample(x, replace=TRUE)
@@ -64,35 +65,42 @@ for (i in 1:B){
 
 Tstar02 = quantile(Tstar, 0.02)
 Tstar04 = quantile(Tstar, 0.98)
-Tstar02
-Tstar04
-
+print(sprintf("Bootstrap 96%% CI = [%.2f, %.2f]", Tstar02, Tstar04))
 ```
 
-Our bootstrap CI of 96% is $[2810.32, 3014.50]$ which is approximately
-consistent with the CI calculated previously (as expected).
+The output of our bootstrap 96% CI indicates that we can say with 96%
+confidence that the true mean weight of newborn babies is between
+`r sprintf("[%.2f, %.2f]", Tstar02, Tstar04)` grams. This is
+approximately consistent with the CI calculated previously (as
+expected).
 
 **b)**
 
-Use wilcoxon sign test?
-
 ```{r}
-t.test(x, mu=2800, alt="g")[[4]]
+res = t.test(x, mu=2800, alt="g")
+res #[[4]]
 ```
 
 The output of the confidence interval here denotes that we can say with
-95% confidence that the true mean is between
-`r t.test(x, mu=2800, alt="g")[[4]]`.
-
-```{r}
-wilcox.test(x, mu=2800, alt="g")
-
-```
+95% confidence that the true mean is in the interval
+`r sprintf("[%.4f, %.4f]", res$conf.int[[1]], res$conf.int[[2]])`, and
+with a p-value of `r sprintf("%.4f", res$p.value)` \< 0.05, we can
+accept the alternative hypothesis from the expert that the mean
+birthweight $\mu > 2800$ grams.
 
 As we previously determined, the data is approximately normally
 distributed, and symmetric. Therefore the difference between the mean
 and median is minimal, and we can use a Wilcoxon signed rank test for
 one sample.
+
+```{r}
+res = wilcox.test(x, mu=2800, alt="g")
+res
+```
+
+The resulting p-value of `r sprintf("%.4f", res$p.value)` \< 0.05 also
+supports accepting the alternative hypothesis from the expert that
+$\mu > 2800$ grams.
 
 **c)**
 
@@ -134,14 +142,14 @@ pt(-0.449, df=df)
 
 ```{r,echo=FALSE,fig.height=3.5}
 data = read.table("cholesterol.txt", header=T)
-data
+#data
 ```
 
 ## Exercise 3: Diet
 
 ```{r}
 data = read.table("diet.txt", header=T)
-data
+#data
 ```
 
 ## Exercise 4: Yield of Peas
@@ -149,5 +157,5 @@ data
 ```{r}
 library(MASS)
 data = npk
-data
+#data
 ```
