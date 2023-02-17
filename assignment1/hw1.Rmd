@@ -140,9 +140,68 @@ pt(-0.449, df=df)
 
 ## Exercise 2: Cholesterol
 
+**a)**
+
 ```{r,echo=FALSE,fig.height=3.5}
 data = read.table("cholesterol.txt", header=T)
-#data
+
+plot(data$Before, data$After8weeks, main="Scatter Plot of Cholestrol Before vs After Treatment", xlab="Cholestrol Before (mmol/L)", ylab="Cholestrol After (mmol/L)")
+
+# checking normality:
+par(mfrow=c(1,2))
+hist(data$Before, freq=F)
+qqnorm(data$Before)
+shapiro.test(data$Before)
+
+hist(data$After8weeks, freq=F)
+qqnorm(data$After8weeks)
+shapiro.test(data$After8weeks)
+```
+
+Based on the histograms, qqplots and shapiro-Wilk normality test results
+(both variables having $p>0.05$), both variables (`Before`,
+`After8Weeks`) appear to be normally distributed.
+
+As both variables appear to be normal, we can use the pearson's
+correlation test to test the correlation between them.
+
+```{r}
+# TODO: use Pearsons' correlation test here
+
+```
+
+**b)**
+
+In this experiment, the data are paired because a given index $i$ into
+the two variables, contains a value measured from the same experimental
+unit (person) before and after receiving a treatment (a low fat diet in
+this case).
+
+To investigate whether the diet had an effect, we can use a paired
+t-test, and a TODO?? test.
+
+TODO: explain $H_0$
+
+```{r}
+
+```
+
+**c)**
+
+```{r}
+
+```
+
+**d)**
+
+```{r}
+
+```
+
+**e)**
+
+```{r}
+
 ```
 
 ## Exercise 3: Diet
