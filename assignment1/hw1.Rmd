@@ -116,12 +116,19 @@ for(i in 1:B) {
   psign[i] = wilcox.test(y, mu=mu, alt="g")[[3]]
   #psign[i] = binom.test(sum(x>0),n,p=0.5)[[3]]
 } ## extract p-value
-sum(psign<0.05) / B
-sum(pttest<0.05) / B
+signPower = sum(psign<0.05) / B
+tPower = sum(pttest<0.05) / B
+
+print(sprintf("wilcox signed rank test power = %.4f, t-test power = %.4f", signPower, tPower))
+par(mfrow=c(1,2))
 hist(psign)
 hist(pttest)
 
 ```
+
+Our simulation results suggest that for this problem, the power of the
+t-test is `r sprintf("%.4f", tPower)`, and the power of Wilcoxon sign
+test is `r sprintf("%.4f", signPower)`.
 
 **d)**
 
@@ -137,6 +144,20 @@ pt(-0.449, df=df)
   #qt(0.98, length(x))
 
 ```
+
+**e)**
+
+```{r}
+prop.test(c(34, 28), c(95, 93))
+```
+
+We can consider male babies to be population1, and female babies to be
+population2. We'll call a "success" when a baby is born \< 2600 grams.
+Based on the results of our proportion test results above, we reject the
+$H_0$ that the proportion of babies born \< 2600 grams differs between
+the male and female populations.
+
+<!--#  TODO: how do we connect this to the statement about means??? -->
 
 ## Exercise 2: Cholesterol
 
@@ -163,12 +184,17 @@ Based on the histograms, qqplots and shapiro-Wilk normality test results
 `After8Weeks`) appear to be normally distributed.
 
 As both variables appear to be normal, we can use the pearson's
-correlation test to test the correlation between them.
+correlation test (instead of spearman's) to test the correlation between
+them.
 
 ```{r}
-# TODO: use Pearsons' correlation test here
-
+cor.test(data$Before, data$After8weeks)
 ```
+
+The pearson's correlation test produces a correlation coefficient of
+$0.9909$, which is very close to 1.0, which suggests that indeed there
+is a strong positive correlation between the cholestrol levels `Before`
+and `After8Weeks` .
 
 **b)**
 
