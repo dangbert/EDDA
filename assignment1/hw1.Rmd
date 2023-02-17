@@ -133,29 +133,48 @@ test is `r sprintf("%.4f", signPower)`.
 **d)**
 
 ```{r}
-pnorm(2600, mean = mean(x), sd=sd(x))
-df = length(x) - 1
-sd(x)
-mean(x)
+# compute pHat based on the data:
+pHat = sum(x < 2600) / length(x)
+n = length(x)
+# compute z_{\alpha/2}
+z = (pHat - 0.25) / sqrt((pHat * (1-pHat)) / n)
+sprintf("pHat = %.5f, z = %.5f", pHat, z)
+# compute alpha:
+alpha = 2 * pnorm(z, lower.tail = F)
+ciLevel = 1 - alpha
+sprintf("confidence interval level = %.5f", ciLevel)
 
-tval = (2600 - mean(x)) / sd(x)
-tval
-pt(-0.449, df=df)
-  #qt(0.98, length(x))
-
+ciUpper = pHat + z * sqrt((pHat * (1-pHat)) / n)
+ciLower = pHat - z * sqrt((pHat * (1-pHat)) / n)
+sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)
 ```
 
-**e)**
+$$
+0.25 = \hat{p} - z_{\alpha/2} \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}
+\rightarrow z_{\alpha/2} = \frac{\hat{p} - 0.25}{\sqrt{\frac{\hat{p}(1-\hat{p})}{n}}}
+$$
+
+We compute $\hat{p}$ from the data, use it to solve for $z_{\alpha/2}$,
+allowing us to compute that \$\\alpha = 0.01\$. So the original
+confidence interval was at 98% level, and in our code above we compute
+the full confidence interval
+`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`.**\
+e)**
 
 ```{r}
 prop.test(c(34, 28), c(95, 93))
+#prop.test(c(34, 28), c(95, 93))
 ```
 
-We can consider male babies to be population1, and female babies to be
-population2. We'll call a "success" when a baby is born \< 2600 grams.
-Based on the results of our proportion test results above, we reject the
-$H_0$ that the proportion of babies born \< 2600 grams differs between
-the male and female populations.
+Considering male and female babies to be two separate populations, we'll
+call a "success" when a baby is born \< 2600 grams. So we do a
+proportion test comparing the "successes" of each respective population
+($34/95$ vs $28/93$), and the resulting p-value $p=0.5007 > 0.05$
+indicates we fail to reject the $H_0$ that the proportion of babies born
+\< 2600 grams differs between the male and female populations.
+
+So the expert's claim, is rejected (this conclusion is the best we can
+do with the data we have).
 
 <!--#  TODO: how do we connect this to the statement about means??? -->
 
