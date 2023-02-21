@@ -74,6 +74,8 @@ confidence that the true mean weight of newborn babies is between
 approximately consistent with the CI calculated previously (as
 expected).
 
+<!-- TODO: note that what we did above was a "percentile boostrap CI", maybe we should do the other version?  See Lecture2, slide 6+9-->
+
 **b)**
 
 ```{r}
@@ -158,7 +160,11 @@ We compute $\hat{p}$ from the data, use it to solve for $z_{\alpha/2}$,
 allowing us to compute that \$\\alpha = 0.01\$. So the original
 confidence interval was at 98% level, and in our code above we compute
 the full confidence interval
-`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`.**\
+`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`.
+
+<!--# TODO: think about if we should have used t-value instead?  -->
+
+**\
 e)**
 
 ```{r}
@@ -223,7 +229,10 @@ unit (person) before and after receiving a treatment (a low fat diet in
 this case).
 
 To investigate whether the diet had an effect, we can use a paired
-t-test, and a TODO?? test.
+t-test, and a sign test.
+
+In this experiment, the data are paired as each experimental unit
+(person) had their cholesterol measured before and after treatment.
 
 TODO: explain $H_0$
 
@@ -231,16 +240,83 @@ TODO: explain $H_0$
 
 ```
 
+Permutation test could also be used here because we have two paired
+samples, and no assumptions are needed.
+
 **c)**
 
-```{r}
+Based on the sample of cholesterol after 8 weeks, we can compute a CI
+for the population's average using:
 
+$$
+\bar{X} \pm t_{\alpha/2}\frac{s}{\sqrt{n}}
+$$
+
+And given the uniform distribution $unif(3, \theta)$ has mean
+$\mu = \frac{\theta+3}{2} \rightarrow \theta = 2*\mu+3$, so we can
+compute theta from our CI for xbar.
+
+```{r}
+xbar = mean(data$After8weeks)
+s = sd(data$After8weeks)
+n = length(data$After8weeks)
+#qt(0.95, df=n-1)
+
+m = qt(0.95, df=n-1) * (s / sqrt(n))
+# compute CI for \bar{x}
+xBarLow = xbar - m
+xBarHigh = xbar + m
+sprintf("CI for xbar = [%.4f, %.4f]", xBarLow, xBarHigh)
+
+# use results to compute CI for \theta
+thetaLow = 2 * xBarLow - 3
+thetaHigh = 2 * xBarHigh - 3
+sprintf("CI for theta = [%.4f, %.4f]", thetaLow, thetaHigh)
 ```
 
 **d)**
 
 ```{r}
+# returns TRUE if X ~Unif(3, theta) is plausible (p > 0.05)
+doBootstrap = function (x, theta, makePlot=FALSE) {
+  n = length(x)
+  t = max(x)
+  B = 4000
+  tstar = numeric(B)
+  for (i in 1:B) {
+    xstar = runif(n, min=3, max=theta)
+    tstar[i] = max(xstar)
+  }
+  
+  pl = sum(tstar<t) / B
+  pr = sum(tstar>t) / B
+  p = 2 * min(pl, pr) # e.g. 0.038
+  
+  if (makePlot) {
+  # make histogram:
+    hist(tstar,prob=T, main="Histogram of tstar", freq=F)
+    lines(rep(t,2), c(0,0.03), col="red", lwd=2)
+    axis(1,t,expression(paste("t")))
+    print(sprintf("p = %.4f", p))
+  }
+  #return(p >= 0.05);
+  return(data.frame(theta=theta, p=p, valid=(p>=0.05)))
+}
 
+#results = data.frame(p=c(), valid=c())
+results = NULL
+for (theta in seq(3,12,0.25)){
+  cur = 
+    doBootstrap(data$After8weeks, theta, makePlot=FALSE)
+  if (is.null(results)) {
+    results = cur
+  } else {
+    results = rbind(results, cur)
+  }
+}
+plot(results$theta, results$p, main="P value vs Theta")
+results
+#sprintf("res = %d", res)
 ```
 
 **e)**
