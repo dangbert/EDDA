@@ -319,17 +319,93 @@ results
 #sprintf("res = %d", res)
 ```
 
+<!--# TODO: undestand why you do 2 * min(pl, pr) -->
+
+You could use the Kolmogorv-Smirnov test here as well, by generating a
+sample of values $(Y_1, …, Y_n) \sim Unif(3, \theta)$ for a given
+$\theta$, allowing you to evaluate if the original data sample could
+also be from the same distribution.
+
 **e)**
 
 ```{r}
-
+data$After8weeks
+res = binom.test(sum(data$After8weeks < 6), length(data$After8weeks), p=0.5, alt="g")
+res
 ```
+
+The p-value from the sign-test is \> 0.05 so we fail to reject
+$H_0: m < 6$, so the test suggests that the median cholesterol level
+after 8 weeks of low fat diet is indeed less than 6.
+
+```{r}
+binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="g")
+```
+
+TODO: consider doing a proportion test like in 1d.
+
+TODO: either way elaborate on answer
 
 ## Exercise 3: Diet
 
+**a)**
+
 ```{r}
 data = read.table("diet.txt", header=T)
-#data
+# compute weight lost
+data$weightlost = data$preweight - data$weight6weeks
+
+par(mfrow = c(1, 3))
+ylim = c(-3, 10)
+boxplot(dplyr::filter(data, diet == 1)$weightlost, main="Diet 1", ylab="Weight Lost (kg)", ylim=ylim)
+boxplot(dplyr::filter(data, diet == 2)$weightlost, main="Diet 2", ylab="Weight Lost (kg)", ylim=ylim)
+boxplot(dplyr::filter(data, diet == 3)$weightlost, main="Diet 3", ylab="Weight Lost (kg)", ylim=ylim)
+
+stripchart(dplyr::filter(data, diet == 1)$weightlost, main="Diet 1", ylab="Weight Lost (kg)", ylim=ylim, vertical=T)
+stripchart(dplyr::filter(data, diet == 2)$weightlost, main="Diet 2", ylab="Weight Lost (kg)", ylim=ylim, vertical=T)
+stripchart(dplyr::filter(data, diet == 3)$weightlost, main="Diet 3", ylab="Weight Lost (kg)", ylim=ylim, vertical=T)
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(data$preweight, freq=F)
+qqnorm(data$preweight, main="Normal QQ plot: preweight")
+shapiro.test(data$preweight)
+
+hist(data$weight6weeks, freq=F)
+qqnorm(data$weight6weeks, main="Normal QQ plot: weight6weeks")
+shapiro.test(data$weight6weeks)
+
+boxplot(data.frame(preweight=data$preweight, weightweeks6=data$weight6weeks))
+```
+
+Based on the histograms, normal qq plots, and shapiro-wilk test results
+(with weight6weeks having $p<0.05$), normality seems doubtful for these
+variables (certainly for weight6weeks at least).
+
+Additionally, while the two variables appear symmetric based on the
+boxplots, the histogram for preweight casts some doubt into the symmetry
+of the data, so we'll use the sign test as a safe way to compare the
+median difference between these two variables.
+
+<!--# TODO: ask TA if this is the right interpretation -->
+
+(Note that we assume this question wants us to combine the sub-datasets
+of the 3 diets, into a larger dataset that doesn't consider the type of
+diet).
+
+```{r}
+binom.test(sum(data$weightlost < 0), length(data$weightlost), p=0.5, alt="two.sided")
+```
+
+The results of the sign test with p=2.2e-16, lead use to reject the
+$H_0: m =0$ (that the median difference in weight before and after the
+diet is 0).
+
+**b)**
+
+```{r}
+
 ```
 
 ## Exercise 4: Yield of Peas
