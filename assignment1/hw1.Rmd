@@ -260,9 +260,8 @@ compute theta from our CI for xbar.
 xbar = mean(data$After8weeks)
 s = sd(data$After8weeks)
 n = length(data$After8weeks)
-#qt(0.95, df=n-1)
 
-m = qt(0.95, df=n-1) * (s / sqrt(n))
+m = qt(0.975, df=n-1) * (s / sqrt(n))
 # compute CI for \bar{x}
 xBarLow = xbar - m
 xBarHigh = xbar + m
@@ -448,14 +447,16 @@ dietFrame = data.frame(
   weightlost=c(diet1$weightlost, diet2$weightlost, diet3$weightlost),
   diet=factor(rep(c("diet1", "diet2", "diet3"), times=c(length(diet1$weightlost), length(diet2$weightlost), length(diet3$weightlost))))
 )
-       
-dietaov = aov(weightlost~diet, data=dietFrame)
-print("dietaov:")
-dietaov
-print("summary(dietaov):")
-summary(dietaov)
-print("anova:")
-anova(dietaov)
+#dietaov = aov(weightlost~diet, data=dietFrame)
+
+
+# convert diet from int -> string (for informing linear model)!!
+data$diet = as.character(data$diet)
+
+dietaov = lm(weightlost~diet, data=data)
+#print("dietaov:"); dietaov
+print("summary(dietaov):"); summary(dietaov)
+print("anova:"); anova(dietaov)
 ```
 
 ```{r}
