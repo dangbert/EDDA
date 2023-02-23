@@ -409,12 +409,16 @@ of the 3 diets, into a larger dataset that doesn't consider the type of
 diet).
 
 ```{r}
-res = binom.test(sum(data$weightlost <= 0), length(data$weightlost), p=0.5, alt="two.sided")
+res = binom.test(sum(data$weightlost > 0), length(data$weightlost), p=0.5,alternative= "greater")
+res
 ```
 
-The results of the sign test with p=`r res$p.value` \< 0.05 led us to
+The results of the sign test with p=`r res$p.value` \> 0.05 led us to not
 reject the $H_0: m \le 0$ (that the median difference in weight before
-and after the diet is 0 or less).
+and after the diet is 0 or less). This means that the 
+
+<!--# TODO: ask TA if this is the right interpretation, and why the p-value is 0?? -->
+
 
 <!--# TODO: ask professor, wouldn't sum(data$weightlost == 0) always be 0 when H_0 is m =m_0  -->
 
@@ -436,8 +440,7 @@ checkNorm(diet1$weightlost, "Diet 1"); checkNorm(diet2$weightlost, "Diet 2"); ch
 Results suggest that normality is doubtful (for at least diet 1 and 3).
 We will proceed with ANOVA anyways as instructed.
 
-Note we'll use the `aov` function over `lm` because this is an
-unbalanced experiment (diet1 has a smaller sample size than the others).
+<!-- TODO: understand L and Q in output (using "effect parametrization") -->
 
 ```{r}
 # convert diet from int -> string (for informing linear model)!!
@@ -445,16 +448,68 @@ unbalanced experiment (diet1 has a smaller sample size than the others).
 # tell R that certain columns are factor and not just numbers
 data$diet = factor(data$diet)
 
+
+
+contrasts(data$diet) <- contr.poly(length(levels(data$diet)))
+#contrasts(data$diet) = contr.sum
+
 dietaov = lm(weightlost~diet, data=data)
-#print("dietaov:"); dietaov
+print("dietaov:"); dietaov
 print("summary(dietaov):"); summary(dietaov)
 print("anova:"); anova(dietaov)
 ```
+
+The Kruskal-Wallis test can be applied here because $n_i > 5$ for all diet groups, and the test doesn't rely on normality so we don't have to be concerned about normality.
 
 ```{r}
 
 ```
 
+**c**:
+
+```{r}
+# diet, gender
+data$gender = factor(data$gender)
+
+# remove people with no gender data
+data2 = dplyr::filter(data, !is.na(gender))
+interaction.plot(data2$gender, data2$diet, data2$weightlost)
+interaction.plot(data2$diet, data2$gender, data2$weightlost)
+
+# TODO: reset contrasts?
+#contrasts(data2$diet) = contr.treatment(length(levels(data2$diet)))
+gaov = lm(weightlost~diet*gender, data=data2)
+
+print("gaov:"); gaov
+print("summary(gaov):"); summary(gaov)
+ganova = anova(gaov)
+print("anova:"); ganova
+```
+<!-- TODO: interpret interaction plots -->
+
+The p-value for interaction, $0.0930 > 0.05$, indicates we fail to reject $H_{AB}$, so we need to run ANOVA again with a model that doesnt' include interaction between the diet and gender variables.
+
+```{r}
+gaov = lm(weightlost~diet+gender, data=data2)
+
+print("gaov:"); gaov
+print("summary(gaov):"); summary(gaov)
+ganova = anova(gaov)
+print("anova:"); ganova
+```
+
+Based on the ANOVA results, we fail to reject the null hypothesis $H_B$ (that gender has no effect on weightlost), however we reject $H_A$ (that diet has no effect on weightlost), and as stated before there appears to be no interaction between gender and diet on weightlost.
+
+**e)**:
+Given the data, it seems more intuitive to us to use the approach from b). This is because the data has these three defining diets, and the one-way ANOVA model allows for a more fine-grained approach into checking factor effects. This is further confirmed by gender not being a statistically significant factor into weight loss, as per c).
+
+<!--TODO: Read this and see if you agree -->
+
+<!-- TODO: understand how to interpret 3 b) results, and then simply predict weight difference using mu and alphas... -->
+
+
+
+ 
 ## Exercise 4: Yield of Peas
 
 ```{r}
