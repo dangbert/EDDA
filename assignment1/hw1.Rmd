@@ -345,8 +345,7 @@ res = binom.test(sum(data$After8weeks >= 6), length(data$After8weeks), p=0.5, al
 ```
 
 The p-value from the sign-test is `r res$p.value` \> 0.05 so we fail to
-reject $H_0: m \ge 6$, so the test suggests that the median cholesterol
-level after 8 weeks of low fat diet is not less than 6.
+reject $H_0: m \ge 6$.
 
 ```{r}
 binom.test(sum(data$After8weeks <= 4.5), length(data$After8weeks), p=0.25, alt="g")
@@ -441,17 +440,10 @@ Note we'll use the `aov` function over `lm` because this is an
 unbalanced experiment (diet1 has a smaller sample size than the others).
 
 ```{r}
-#dietFrame = data.frame(diet1$weightlost, diet2$weightlost, diet3$weightlost)
-# https://stackoverflow.com/a/8320687
-dietFrame = data.frame(
-  weightlost=c(diet1$weightlost, diet2$weightlost, diet3$weightlost),
-  diet=factor(rep(c("diet1", "diet2", "diet3"), times=c(length(diet1$weightlost), length(diet2$weightlost), length(diet3$weightlost))))
-)
-#dietaov = aov(weightlost~diet, data=dietFrame)
-
-
 # convert diet from int -> string (for informing linear model)!!
-data$diet = as.character(data$diet)
+#data$diet = as.character(data$diet)
+# tell R that certain columns are factor and not just numbers
+data$diet = factor(data$diet)
 
 dietaov = lm(weightlost~diet, data=data)
 #print("dietaov:"); dietaov
