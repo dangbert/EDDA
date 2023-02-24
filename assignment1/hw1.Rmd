@@ -107,7 +107,6 @@ $\mu > 2800$ grams.
 **c)**
 
 ```{r}
-
 B = 10000; n = length(x)
 psign=numeric(B) ## will contain p-values of sign test
 pttest=numeric(B) ## will contain p-values of t-test
@@ -157,12 +156,11 @@ $$
 $$
 
 We compute $\hat{p}$ from the data, use it to solve for $z_{\alpha/2}$,
-allowing us to compute that \$\\alpha = 0.01\$. So the original
-confidence interval was at 98% level, and in our code above we compute
-the full confidence interval
-`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`.
-
-<!--# TODO: think about if we should have used t-value instead?  -->
+allowing us to compute that $\alpha = 0.01$ (note z-distribution can be
+used here thanks to the central limit theorem because $n=188$ is very
+large). So the original confidence interval was at 98% level, and in our
+code above we compute the full confidence interval
+`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`
 
 **\
 e)**
@@ -181,8 +179,6 @@ indicates we fail to reject the $H_0$ that the proportion of babies born
 
 So the expert's claim, is rejected (this conclusion is the best we can
 do with the data we have).
-
-<!--#  TODO: how do we connect this to the statement about means??? -->
 
 ## Exercise 2: Cholesterol
 
@@ -257,6 +253,7 @@ $\mu = \frac{\theta+3}{2} \rightarrow \theta = 2*\mu+3$, so we can
 compute theta from our CI for xbar.
 
 ```{r}
+summary(data$After8weeks)
 xbar = mean(data$After8weeks)
 s = sd(data$After8weeks)
 n = length(data$After8weeks)
@@ -309,15 +306,12 @@ doBootstrap = function (x, theta, makePlot=FALSE) {
     axis(1,t,expression(paste("t")))
     print(sprintf("p = %.4f", p))
   }
-  #return(p >= 0.05);
   return(data.frame(theta=theta, p=p, valid=(p>=0.05)))
 }
 
-#results = data.frame(p=c(), valid=c())
 results = NULL
 for (theta in seq(3,12,0.25)){
-  cur = 
-    doBootstrap(data$After8weeks, theta, makePlot=FALSE)
+  cur = doBootstrap(data$After8weeks, theta, makePlot=FALSE)
   if (is.null(results)) {
     results = cur
   } else {
@@ -325,7 +319,8 @@ for (theta in seq(3,12,0.25)){
   }
 }
 plot(results$theta, results$p, main="P value vs Theta")
-results
+# print signficant results
+dplyr::filter(results, p>0.05)
 #sprintf("res = %d", res)
 ```
 
@@ -333,7 +328,7 @@ results
 
 You could use the Kolmogorv-Smirnov test here as well, by generating a
 sample of values $(Y_1, …, Y_n) \sim Unif(3, \theta)$ for a given
-\$\\theta\$, allowing you to evaluate if the original data sample could
+$\theta$, allowing you to evaluate if the original data sample could
 also be from the same distribution. Technically you could run this test
 many times, for many generated samples \$Y\$, allowing you to more
 robustly verify the results (as the particular values of $Y$).
@@ -347,13 +342,19 @@ res = binom.test(sum(data$After8weeks >= 6), length(data$After8weeks), p=0.5, al
 The p-value from the sign-test is `r res$p.value` \> 0.05 so we fail to
 reject $H_0: m \ge 6$.
 
+To test if the fraction of cholesterol levels After8weeks less than 4.5
+is at most 25%, we propose using a modified version of the sign test
+which tests the 25th percentile of the data (rather than the median 50th
+percentile). This test is implemented as a binomial test with $p=0.25$.
+
 ```{r}
-binom.test(sum(data$After8weeks <= 4.5), length(data$After8weeks), p=0.25, alt="g")
+res = binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="l")
+#binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="g")
 ```
 
-TODO: consider doing a proportion test like in 1d.
-
-TODO: either way elaborate on answer
+The p-value from the sign-test is `r res$p.value` \> 0.05 so there's not
+enough evidence to reject $H_0$ (that the fraction of the cholesterol
+levels after 8 weeks of low fat diet less than 4.5 is $\le 25\%$).
 
 ## Exercise 3: Diet
 
@@ -409,18 +410,12 @@ of the 3 diets, into a larger dataset that doesn't consider the type of
 diet).
 
 ```{r}
-res = binom.test(sum(data$weightlost > 0), length(data$weightlost), p=0.5,alternative= "greater")
-res
+res = binom.test(sum(data$weightlost > 0), length(data$weightlost), p=0.5, alternative="g")
 ```
 
-The results of the sign test with p=`r res$p.value` \> 0.05 led us to not
+The results of the sign test with p=`r res$p.value` \< 0.05 led us to
 reject the $H_0: m \le 0$ (that the median difference in weight before
-and after the diet is 0 or less). This means that the 
-
-<!--# TODO: ask TA if this is the right interpretation, and why the p-value is 0?? -->
-
-
-<!--# TODO: ask professor, wouldn't sum(data$weightlost == 0) always be 0 when H_0 is m =m_0  -->
+and after the diet is $\le 0$).
 
 **b)**
 
@@ -448,18 +443,30 @@ We will proceed with ANOVA anyways as instructed.
 # tell R that certain columns are factor and not just numbers
 data$diet = factor(data$diet)
 
-
-
-contrasts(data$diet) <- contr.poly(length(levels(data$diet)))
+# enable "effect parametrization"
+#contrasts(data$diet) <- contr.poly(length(levels(data$diet)))
 #contrasts(data$diet) = contr.sum
 
+
 dietaov = lm(weightlost~diet, data=data)
+danova = anova(dietaov)
 print("dietaov:"); dietaov
 print("summary(dietaov):"); summary(dietaov)
-print("anova:"); anova(dietaov)
+print("anova:"); danova
 ```
 
-The Kruskal-Wallis test can be applied here because $n_i > 5$ for all diet groups, and the test doesn't rely on normality so we don't have to be concerned about normality.
+The p-value from ANOVA $0.003229 < 0.05$ suggests that diet does have a
+significant effect on weight loss.
+
+All 3 diets appear to lead to weight lost (based on their average
+values, which can be seen by adding the intercept (diet1's mean), to the
+respective $\alpha$ values for diet2 and diet3. Also diet3 appeared to
+be the best for losing weight, with the highest average weight loss of
+`p mean(diet1$weightlost)`.
+
+The Kruskal-Wallis test can be applied here because $n_i > 5$ for all
+diet groups, and the test doesn't rely on normality so we don't have to
+be concerned about normality.
 
 ```{r}
 
@@ -485,9 +492,12 @@ print("summary(gaov):"); summary(gaov)
 ganova = anova(gaov)
 print("anova:"); ganova
 ```
+
 <!-- TODO: interpret interaction plots -->
 
-The p-value for interaction, $0.0930 > 0.05$, indicates we fail to reject $H_{AB}$, so we need to run ANOVA again with a model that doesnt' include interaction between the diet and gender variables.
+The p-value for interaction, $0.0930 > 0.05$, indicates we fail to
+reject $H_{AB}$, so we need to run ANOVA again with a model that doesnt'
+include interaction between the diet and gender variables.
 
 ```{r}
 gaov = lm(weightlost~diet+gender, data=data2)
@@ -498,18 +508,22 @@ ganova = anova(gaov)
 print("anova:"); ganova
 ```
 
-Based on the ANOVA results, we fail to reject the null hypothesis $H_B$ (that gender has no effect on weightlost), however we reject $H_A$ (that diet has no effect on weightlost), and as stated before there appears to be no interaction between gender and diet on weightlost.
+Based on the ANOVA results, we fail to reject the null hypothesis $H_B$
+(that gender has no effect on weightlost), however we reject $H_A$ (that
+diet has no effect on weightlost), and as stated before there appears to
+be no interaction between gender and diet on weightlost.
 
-**e)**:
-Given the data, it seems more intuitive to us to use the approach from b). This is because the data has these three defining diets, and the one-way ANOVA model allows for a more fine-grained approach into checking factor effects. This is further confirmed by gender not being a statistically significant factor into weight loss, as per c).
+**e)**: Given the data, it seems more intuitive to us to use the
+approach from b). This is because the data has these three defining
+diets, and the one-way ANOVA model allows for a more fine-grained
+approach into checking factor effects. This is further confirmed by
+gender not being a statistically significant factor into weight loss, as
+per c).
 
 <!--TODO: Read this and see if you agree -->
 
 <!-- TODO: understand how to interpret 3 b) results, and then simply predict weight difference using mu and alphas... -->
 
-
-
- 
 ## Exercise 4: Yield of Peas
 
 ```{r}
@@ -549,6 +563,7 @@ tail(random_df,4)
 
 **b)**
 <!-- TODO: actually need to plot mean per block, and answer final part of question-->
+
 ```{r}
 N0 = dplyr::filter(data, N == 0)
 N1 = dplyr::filter(data, N == 1)
@@ -567,6 +582,14 @@ nanova = anova(naov)
 print("nanova:"); nanova
 ```
 
-As we can see from the two-way ANOVA above, the block factor has p < 0.05, so we reject the null hypothesis that the block factor has no effect on the yield, suggesting that we should keep it in the model. 
+As we can see from the two-way ANOVA above, the block factor has p \<
+0.05, so we reject the null hypothesis that the block factor has no
+effect on the yield, suggesting that it is sensible to keep it in the
+model.
+
+The Friedman test can't be used here, because it's for complete block
+design experiments, and this dataset was the result of an incomplete
+block design (not all possible combinations of soil additives were
+applied to each farm plot).
 
 <!-- TODO: -->
