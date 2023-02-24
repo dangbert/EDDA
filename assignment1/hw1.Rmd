@@ -515,5 +515,58 @@ Given the data, it seems more intuitive to us to use the approach from b). This 
 ```{r}
 library(MASS)
 data = npk
+
+randomize = function(n_blocks){
+  t = c(1,1,0,0)
+  
+  t_temp = c()
+  
+  for (x in 1:n_blocks){
+    t_temp = c(t_temp, sample(t))
+  }
+  return(t_temp)
+}
+
+#Generate random columns where each block has random permutations of exactly two of each soil additive
+
+N = randomize(6)
+P = randomize(6)
+K = randomize(6)
+
+block = c()
+
+for (x in 1:6){
+  block = c(block, rep(x,4))
+  
+}
 #data
+
+random_df = data.frame(block = block, N = N, P = P, K = K)
+head(random_df,4)
+tail(random_df,4)
+
 ```
+
+**b)**
+<!-- TODO: actually need to plot mean per block, and answer final part of question-->
+```{r}
+N0 = dplyr::filter(data, N == 0)
+N1 = dplyr::filter(data, N == 1)
+barplot(c(mean(N0$yield), mean(N1$yield)), names.arg=c("Nitrogen", "No Nitrogen"), main="Plots With Nitrogen vs Without", ylab="Average Yield", ylim=c(0,60))
+```
+
+**c)**
+
+```{r}
+
+naov = lm(yield~block+N, data=data)
+
+print("naov:"); naov
+print("summary(naov):"); summary(naov)
+nanova = anova(naov)
+print("nanova:"); nanova
+```
+
+As we can see from the two-way ANOVA above, the block factor has p < 0.05, so we reject the null hypothesis that the block factor has no effect on the yield, suggesting that we should keep it in the model. 
+
+<!-- TODO: -->
