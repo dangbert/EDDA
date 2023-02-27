@@ -22,7 +22,7 @@ checkNorm = function(data, name, unit="") {
   hist(data, main=sprintf("Histogram of %s", name), xlab=xlab)
   qqnorm(data, main=sprintf("Normal qqplot of %s", name))
   res = shapiro.test(data)
-  print(sprintf("Shapiro wilk normality p-value for %s: %.3f", name, res$p.value))
+  print(sprintf("Shapiro-Wilk normality p-value for %s: %.3f", name, res$p.value))
   return(res$p.value)
 }
 
@@ -204,9 +204,10 @@ differs between the male and female populations.
 
 **2 a)**
 
-```{r,echo=FALSE,fig.width=4.1}
+```{r,echo=FALSE,fig.height=3,fig.width=3.2}
+#par(mfrow = c(1, 2))
 data = read.table("cholesterol.txt", header=T)
-plot(data$Before, data$After8weeks, main="Scatter Plot: Cholestrol Before vs After", xlab="Cholesterol Before (mmol/L)", ylab="Cholestrol After (mmol/L)", xlim=c(3,9), ylim=c(3,9))
+plot(data$Before, data$After8weeks, main="Cholesterol Before vs After", xlab="Cholesterol Before (mmol/L)", ylab="Cholesterol After (mmol/L)", xlim=c(3,9), ylim=c(3,9))
 abline(0, 1, col = 'red') # plot y=x for reference
 ```
 
@@ -378,7 +379,6 @@ percentile). This test is implemented as a binomial test with $p=0.25$.
 ```{r}
 res = binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="l")
 printPval(res$p.value)
-#binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="g")
 ```
 
 The p-value from the sign-test is `r sprintf("%.3f", res$p.value)` \>
@@ -394,13 +394,14 @@ $\le 25\%$).
 data = read.table("diet.txt", header=T)
 # compute weight lost
 data$weightlost = data$preweight - data$weight6weeks
-
-par(mfrow = c(1, 3))
-ylim = c(-3, 10)
-
 diet1 = dplyr::filter(data, diet == 1)
 diet2 = dplyr::filter(data, diet == 2)
 diet3 = dplyr::filter(data, diet == 3)
+```
+
+```{r, fig.height=3, echo=FALSE}
+par(mfrow = c(1, 3))
+ylim = c(-3, 10)
 
 boxplot(diet1$weightlost, main="Diet 1", ylab="Weight Lost (kg)", ylim=ylim)
 boxplot(diet2$weightlost, main="Diet 2", ylab="Weight Lost (kg)", ylim=ylim)
@@ -419,7 +420,7 @@ par(mfrow=c(1,1))
 boxplot(data.frame(preweight=data$preweight, weight6weeks=data$weight6weeks), names=c("preweight", "weight6weeks"), main="Weights Before vs After Diet")
 ```
 
-Based on the histograms, normal qq plots, and shapiro-wilk test results
+Based on the histograms, normal qq plots, and Shapiro-Wilk test results
 (with weight6weeks having $p<0.05$), normality seems doubtful for these
 variables (certainly for weight6weeks at least).
 
@@ -428,48 +429,39 @@ boxplots, the histogram for preweight casts some doubt into the symmetry
 of the data, so we'll use the sign test as a safe way to compare the
 median difference between these two variables.
 
-<!--# TODO: ask TA if this is the right interpretation -->
-
-(Note that we assume this question wants us to combine the sub-datasets
+*(Note that we assume this question wants us to combine the sub-datasets
 of the 3 diets, into a larger dataset that doesn't consider the type of
-diet).
+diet).*
 
 ```{r}
 res = binom.test(sum(data$weightlost > 0), length(data$weightlost), p=0.5, alternative="g")
 ```
 
-The results of the sign test with p=`r res$p.value` \< 0.05 led us to
-reject the $H_0: m \le 0$ (that the median difference in weight before
-and after the diet is $\le 0$).
+The results of the sign test with p=`r sprintf("%.3f", res$p.value)` \<
+0.05 led us to reject the $H_0: m \le 0$ (that the median difference in
+weight before and after the diet is $\le 0$).
 
 **3 b)**
 
 First we check for normality in the diet datasets:
 
-```{r}
+```{r, fig.height=3.3}
 par(mfrow = c(1, 2))
-checkNorm(diet1$weightlost, "Diet 1"); checkNorm(diet2$weightlost, "Diet 2"); checkNorm(diet3$weightlost, "Diet 3"); 
+pval = checkNorm(diet1$weightlost, "Diet 1")
+pval = checkNorm(diet2$weightlost, "Diet 2")
+pval = checkNorm(diet3$weightlost, "Diet 3")
 ```
 
-Results suggest that normality is doubtful (for at least diet 1 and 3).
-We will proceed with ANOVA anyways as instructed.
+Based on the boxplots and qqplots, normality appears doubtful (for at
+least diet 1 and 3). We will proceed with ANOVA anyways as instructed.
 
-<!-- TODO: understand L and Q in output (using "effect parametrization") -->
+<!--# contrasts(data$diet) <- contr.poly(length(levels(data$diet))) # "effect parametrization" -->
 
 ```{r}
-# convert diet from int -> string (for informing linear model)!!
-#data$diet = as.character(data$diet)
-# tell R that certain columns are factor and not just numbers
+# tell R that certain columns are factors and not just numbers
 data$diet = factor(data$diet)
-
-# enable "effect parametrization"
-#contrasts(data$diet) <- contr.poly(length(levels(data$diet)))
-#contrasts(data$diet) = contr.sum
-
-
 dietaov = lm(weightlost~diet, data=data)
 danova = anova(dietaov)
-print("dietaov:"); dietaov
 print("summary(dietaov):"); summary(dietaov)
 print("anova:"); danova
 ```
@@ -477,7 +469,7 @@ print("anova:"); danova
 The p-value from ANOVA $0.003 < 0.05$ suggests that diet does have a
 significant effect on weight loss.
 
-All 3 diets appear to lead to weight lost (based on their average
+All 3 diets appear to lead to weight loss (based on their average
 values, which can be seen by adding the intercept (diet1's mean), to the
 respective $\alpha$ values for diet2 and diet3. Also diet3 appeared to
 be the best for losing weight, with the highest average weight loss of
@@ -487,51 +479,37 @@ The Kruskal-Wallis test can be applied here because $n_i > 5$ for all
 diet groups, and the test doesn't rely on normality so we don't have to
 be concerned about normality.
 
-```{r}
-
-```
-
 **3 c**:
 
-```{r}
+```{r, fig.height=5.5}
 # diet, gender
 data$gender = factor(data$gender)
-
+par(mfrow = c(2, 1))
 # remove people with no gender data
 data2 = dplyr::filter(data, !is.na(gender))
 interaction.plot(data2$gender, data2$diet, data2$weightlost, main ="Interaction plot: Diet vs. Gender (0=F, 1=M)" ,ylab = "Average Weightloss (kg)", xlab  = "Gender", trace.label = "Diet")
 
 interaction.plot(data2$diet, data2$gender, data2$weightlost, main ="Interaction plot: Gender (0=F, 1=M) vs. Diet", ylab="Average Weightloss (kg)", xlab = "Diet", trace.label = "Gender")
 
-# TODO: reset contrasts?
-#contrasts(data2$diet) = contr.treatment(length(levels(data2$diet)))
 gaov = lm(weightlost~diet*gender, data=data2)
-
-print("gaov:"); gaov
-print("summary(gaov):"); summary(gaov)
+#print("summary(gaov):"); summary(gaov)
 ganova = anova(gaov)
 print("anova:"); ganova
 ```
 
 <!-- TODO: interpret interaction plots -->
 
-The p-value for interaction, $0.0930 > 0.05$, indicates we fail to
-reject $H_{AB}$, so we need to run ANOVA again with a model that doesn't
-include interaction between the diet and gender variables.
-
-```{r}
-gaov = lm(weightlost~diet+gender, data=data2)
-
-print("gaov:"); gaov
-print("summary(gaov):"); summary(gaov)
-ganova = anova(gaov)
-print("anova:"); ganova
-```
+The p-value for interaction, $0.049 < 0.05$, indicates we reject
+$H_{AB}$ as there's sufficient evidence to suggest there's an
+interaction between the diet and gender variables.
 
 Based on the ANOVA results, we fail to reject the null hypothesis $H_B$
 (that gender has no effect on weightlost), however we reject $H_A$ (that
-diet has no effect on weightlost), and as stated before there appears to
-be no interaction between gender and diet on weightlost.
+diet has no effect on weightlost).
+
+In summary, there's sufficient data to suggest that diet has an effect
+on weightloss, but insufficient to suggest gender does, and gender and
+diet appear to have an interaction on weightlost.
 
 **3 e)**: Given the data, it seems more intuitive to us to use the
 approach from b). This is because the data has these three defining
@@ -540,9 +518,18 @@ approach into checking factor effects. This is further confirmed by
 gender not being a statistically significant factor into weight loss, as
 per c).
 
-<!--TODO: Read this and see if you agree -->
-
 <!-- TODO: understand how to interpret 3 b) results, and then simply predict weight difference using mu and alphas... -->
+
+```{r}
+sprintf("diet1 predicted weightlost: %.3f", dietaov$coefficients[1])
+sprintf("diet2 predicted weightlost: %.3f", dietaov$coefficients[1] + dietaov$coefficients[2])
+sprintf("diet2 predicted weightlost: %.3f", dietaov$coefficients[1] + dietaov$coefficients[3])
+```
+
+The output above gives the predicted weightloss for each diet (using the
+model fit in part 3b). The average predicted weightloss for diets 2 and
+3 are computed by adding their coefficient (in the linear model) to the
+intercept (the predicted diet1 weightlost).
 
 ## Exercise 4: Yield of Peas
 
@@ -560,7 +547,6 @@ randomize = function(n_blocks){
   }
   return(t_temp)
 }
-
 #Generate random columns where each block has random
 #  permutations of exactly two of each soil additive
 N = randomize(6); P = randomize(6); K = randomize(6)
@@ -568,17 +554,15 @@ block = c()
 for (x in 1:6){
   block = c(block, rep(x,4))
 }
-
 random_df = data.frame(block = block, N = N, P = P, K = K)
+# print top and bottom rows of dataframe for visualizing
 head(random_df,4)
 tail(random_df,4)
 ```
 
 **4 b)**
-<!-- TODO: actually need to plot mean per block, and answer final part of question-->
-<!-- see lecture 5, slide 23 -->
 
-```{r}
+```{r,echo=FALSE}
 interaction.plot(data$N, data$block, data$yield, main="Plots Without Nitrogen vs With", ylab="Average Yield", xlab = "Nitrogen Presence", legend = TRUE, trace.label = "Block #")
 ```
 
@@ -588,8 +572,7 @@ interaction.plot(data$N, data$block, data$yield, main="Plots Without Nitrogen vs
 
 ```{r}
 naov = lm(yield~block+N, data=data)
-print("naov:"); naov
-print("summary(naov):"); summary(naov)
+#print("summary(naov):"); summary(naov)
 nanova = anova(naov)
 print("nanova:"); nanova
 ```
@@ -604,46 +587,38 @@ design experiments, and this dataset was the result of an incomplete
 block design (not all possible combinations of soil additives were
 applied to each farm plot).
 
-<!-- TODO: -->
-
 **4 d)**
 
 ```{r}
-# TODO: shorten output (for all anova stuff)...
-testModel = function(raov, coef) {
+testModel = function(raov, coef="") {
   #print("raov:"); print(raov)
-  print("summary(raov):"); print(summary(raov))
+  #print("summary(raov):"); print(summary(raov))
   ranova = anova(raov)
-  print("ranova:"); print(ranova)
-  print("")
-  print(ranova$coef[coef, "Pr(>|t|)"])
-  #summary(model)$coef["x1:x2", "Pr(>|t|)"]
+  print("anova results:"); print(ranova)
 }
-
 testModel(lm(yield~block*N+P+K, data=data), coef="block:N")
-#testModel(lm(yield~block*P+N+K, data=data))
-#testModel(lm(yield~block*K+N+P, data=data))
-
+testModel(lm(yield~block*P+N+K, data=data))
+testModel(lm(yield~block*K+N+P, data=data))
 ```
 
-Based on the Anova results, there's no significant interaction between
-the block and any of the fertilizers (N, P, and K).
+Based on the ANOVA results, there's no significant interaction between
+the block and any of the fertilizers (N, P, and K). This is indicated by
+the p-values for `block:N, block:P, block:K` in each of the respective
+models.
 
 ```{r}
 raov = lm(yield~block+N+P+K, data=data)
-print("summary(raov):"); print(summary(raov))
+#print("summary(raov):"); print(summary(raov))
 ranova = anova(raov)
-print("ranova:"); print(ranova)
-print("")
-print(ranova$coef[coef, "Pr(>|t|)"])
+print("anova results:"); print(ranova)
 ```
 
-Based on the p-values from the ANOVA output, P is not a significant
-factor (effecting yield), while N, K, and block all appear to be
-significant $p<0.05$.
+Based on the p-values from the ANOVA output, P (phosphorous) is not a
+significant factor (effecting yield), while N, K, and block all appear
+to be significant with $p<0.05$.
 
 From the models we investigated, the linear combination
-`lm(yield~block*N+P+K, data=data)` is our favorite because it doesn't
+`lm(yield~block+N+P+K, data=data)` is our favorite because it doesn't
 include an interaction between block and any of the other factors (which
 was found to be insignificant). Therefore this model has a simpler level
 of complexity while still allowing the individual effects of N, P, and K
@@ -657,7 +632,6 @@ to be evaluated.
 
 ```{r}
 library(lme4)
-#model = lmer(pain~treatment+sequence+period+(1|id), REML=FALSE,data=data)
 model1 = lmer(yield~N+(1|block), REML=FALSE,data=data)
 model2 = lmer(yield~(1|block), REML=FALSE,data=data)
 anova(model2, model1)
