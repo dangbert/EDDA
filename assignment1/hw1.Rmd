@@ -415,6 +415,7 @@ stripchart(diet3$weightlost, main="Diet 3", ylab="Weight Lost (kg)", ylim=ylim, 
 par(mfrow=c(1,2))
 pval = checkNorm(data$preweight, "preweight", unit="kg")
 pval = checkNorm(data$weight6weeks, "weight6weeks", unit="kg")
+par(mfrow=c(1,1))
 boxplot(data.frame(preweight=data$preweight, weight6weeks=data$weight6weeks), names=c("preweight", "weight6weeks"), main="Weights Before vs After Diet")
 ```
 
