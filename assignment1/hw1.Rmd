@@ -10,52 +10,74 @@ editor_options:
     wrap: 72
 ---
 
+```{r, echo=FALSE}
+#options(digits=3)
+
+# helper function to check normality throughout this assignment
+checkNorm = function(data, name, unit="") {
+  xlab = name
+  if (unit != "") {
+    xlab = sprintf("%s (%s)", name, unit)
+  }
+  hist(data, main=sprintf("Histogram of %s", name), xlab=xlab)
+  qqnorm(data, main=sprintf("Normal qqplot of %s", name))
+  res = shapiro.test(data)
+  print(sprintf("Shapiro wilk normality p-value for %s: %.3f", name, res$p.value))
+  return(res$p.value)
+}
+
+printPval = function(pval) {
+  print(sprintf("p-value = %.3f", pval))
+}
+```
+
+Note: we made a function `checkNorm()` which prints a histogram, qqplot,
+and p-value from the shapiro-wilk normality test. And we made a function
+`printPval()` which simply prints a given p-value to 3 significant
+figures. We utilize both functions throughout this assignment.
+
 ## Exercise 1: Birthweights
 
 <!--# See template_assign_edda.Rmd for full tips and info for formatting this document -->
 
-**a)**
+**1 a)**
 
-<!--# print(sprintf("96%% confidence interval: [%.4f, %.4f]", res$conf.int[1], res$conf.int[2])) -->
-
-```{r}
+```{r,fig.height=4}
 data = read.table("birthweight.txt", header=T)
 par(mfrow=c(1,2))
 # use x as alias for the dataset
 x = data$birthweight
 
 # checking normality
-hist(x, freq=F)
-qqnorm(x)
-shapiro.test(x)
+pval = checkNorm(x, "Birthweight", unit="g")
 
-t.test(x, conf.level=0.96)
+res = t.test(x, conf.level=0.96)
+print(sprintf("96%% confidence interval: [%.3f, %.3f]", res$conf.int[1], res$conf.int[2]))
 
 # calculate min sample size needed
-tval = qt(0.98, length(x))
+tval = qt(0.98, length(x)-1)
 m = 50
 n = (tval * sd(x) / m) ** 2
-print(sprintf("min sample size, n = %.2f", n))
-
+print(sprintf("min sample size, n = %.3f", n))
 ```
 
 The birthweight data appears to be normal based on a normal-appearing
 histogram, the straight line in the qqplot, and the shapiro-wilk
-normality test (having $p=0.8995 > 0.05$).
+normality test (having $p=0.900 > 0.05$).
 
 $$
-m = \frac{t*s}{\sqrt{n}} \rightarrow n = (\frac{t * s}{m})^2
+m = \frac{t*s}{\sqrt{n}} \rightarrow n = \left(\frac{t * s}{m}\right)^2
 $$
 
 The equation above, gives the sample size, $n$, needed for the
 confidence interval to have a width of 100 (meaning $m=50$), where $t$
 is the t-score for the quantile 0.02 (such that both tails of the
 distribution have total area $1-0.96=0.04$). Our R code above computes
-$n = 832.32$, which rounded up indicates the min sample size is $n=833$
-(for a 96% CI of length at most 100).
+n=`r sprintf("%.3f", n)`, which rounded up indicates the min sample size
+is $n=833$ (for a 96% CI of length at most 100).
 
 ```{r}
-B = 10000
+B = 20000
 Tstar = numeric(B)
 for (i in 1:B){
   # sample with replacement, for a new sample of same length(x)
@@ -65,7 +87,7 @@ for (i in 1:B){
 
 Tstar02 = quantile(Tstar, 0.02)
 Tstar04 = quantile(Tstar, 0.98)
-print(sprintf("Bootstrap 96%% CI = [%.2f, %.2f]", Tstar02, Tstar04))
+print(sprintf("Bootstrap 96%% CI = [%.3f, %.3f]", Tstar02, Tstar04))
 ```
 
 The output of our bootstrap 96% CI indicates that we can say with 96%
@@ -76,19 +98,20 @@ expected).
 
 <!-- TODO: note that what we did above was a "percentile boostrap CI", maybe we should do the other version?  See Lecture2, slide 6+9-->
 
-**b)**
+**1 b)**
 
 ```{r}
 res = t.test(x, mu=2800, alt="g")
-res #[[4]]
+sprintf("95%% confidence interval: [%.3f, %.3f]", res$conf.int[[1]], res$conf.int[[2]])
+printPval(res$p.value)
 ```
 
 The output of the confidence interval here denotes that we can say with
 95% confidence that the true mean is in the interval
-`r sprintf("[%.4f, %.4f]", res$conf.int[[1]], res$conf.int[[2]])`, and
-with a p-value of `r sprintf("%.4f", res$p.value)` \< 0.05, we can
-accept the alternative hypothesis from the expert that the mean
-birthweight $\mu > 2800$ grams.
+`r sprintf("[%.3f, %.3f]", res$conf.int[[1]], res$conf.int[[2]])`, and
+with a p-value of `r sprintf("%.3f", res$p.value)` \< 0.05, we reject
+the null hypothesis, as there's sufficient evidence to support the claim
+that the mean birthweight $\mu > 2800$ grams.
 
 As we previously determined, the data is approximately normally
 distributed, and symmetric. Therefore the difference between the mean
@@ -97,16 +120,16 @@ one sample.
 
 ```{r}
 res = wilcox.test(x, mu=2800, alt="g")
-res
+printPval(res$p.value)
 ```
 
-The resulting p-value of `r sprintf("%.4f", res$p.value)` \< 0.05 also
-supports accepting the alternative hypothesis from the expert that
-$\mu > 2800$ grams.
+The resulting p-value of `r sprintf("%.3f", res$p.value)` \< 0.05 also
+suggests there's sufficient evidence to support the claim that the mean
+birthweight $\mu > 2800$ grams.
 
-**c)**
+**1 c)**
 
-```{r}
+```{r,fig.height=4}
 B = 10000; n = length(x)
 psign=numeric(B) ## will contain p-values of sign test
 pttest=numeric(B) ## will contain p-values of t-test
@@ -115,109 +138,106 @@ for(i in 1:B) {
   mu = 2800
   pttest[i] = t.test(y, mu=mu, alternative="greater")[[3]] ## extract p-value
   psign[i] = wilcox.test(y, mu=mu, alt="g")[[3]]
-  #psign[i] = binom.test(sum(x>0),n,p=0.5)[[3]]
 } ## extract p-value
-signPower = sum(psign<0.05) / B
-tPower = sum(pttest<0.05) / B
+signPower = sum(psign<0.05) / B; tPower = sum(pttest<0.05) / B
 
-print(sprintf("wilcox signed rank test power = %.4f, t-test power = %.4f", signPower, tPower))
-par(mfrow=c(1,2))
-hist(psign)
-hist(pttest)
-
+print(sprintf("wilcox signed rank test power = %.3f, t-test power = %.3f", signPower, tPower))
+#par(mfrow=c(1,2)); hist(psign); hist(pttest)
 ```
+
+<!--# reference: lecture 0&1 slide 70 -->
 
 Our simulation results suggest that for this problem, the power of the
-t-test is `r sprintf("%.4f", tPower)`, and the power of Wilcoxon sign
-test is `r sprintf("%.4f", signPower)`.
+t-test is `r sprintf("%.3f", tPower)`, and the power of Wilcoxon sign
+test is `r sprintf("%.3f", signPower)`. So the t-test is slightly better
+fitted for use with this data (since the data is normal).
 
-**d)**
+**1 d)**
 
-```{r}
-# compute pHat based on the data:
-pHat = sum(x < 2600) / length(x)
-n = length(x)
-# compute z_{\alpha/2}
-z = (pHat - 0.25) / sqrt((pHat * (1-pHat)) / n)
-sprintf("pHat = %.5f, z = %.5f", pHat, z)
-# compute alpha:
-alpha = 2 * pnorm(z, lower.tail = F)
-ciLevel = 1 - alpha
-sprintf("confidence interval level = %.5f", ciLevel)
-
-ciUpper = pHat + z * sqrt((pHat * (1-pHat)) / n)
-ciLower = pHat - z * sqrt((pHat * (1-pHat)) / n)
-sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)
-```
+The equation below shows how to solve for $z_{\alpha/2}$ given the low
+bound (0.25) of a confidence interval for $\hat{p}$. The `pnorm`
+function can then be used to compute $\alpha$ from $z_{\alpha/2}$.
 
 $$
 0.25 = \hat{p} - z_{\alpha/2} \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}
 \rightarrow z_{\alpha/2} = \frac{\hat{p} - 0.25}{\sqrt{\frac{\hat{p}(1-\hat{p})}{n}}}
 $$
 
+```{r}
+pHat = sum(x < 2600) / length(x) # compute pHat based on the data
+n = length(x)
+z = (pHat - 0.25) / sqrt((pHat * (1-pHat)) / n) # compute z_{\alpha/2}
+sprintf("pHat = %.5f, z = %.5f", pHat, z)
+
+alpha = 2 * pnorm(z, lower.tail = F) # compute alpha
+ciLevel = 1 - alpha
+sprintf("confidence interval level = %.3f", ciLevel)
+
+ciUpper = pHat + z * sqrt((pHat * (1-pHat)) / n)
+ciLower = pHat - z * sqrt((pHat * (1-pHat)) / n)
+sprintf("final confidence interval = [%.3f, %.3f]", ciLower, ciUpper)
+```
+
 We compute $\hat{p}$ from the data, use it to solve for $z_{\alpha/2}$,
 allowing us to compute that $\alpha = 0.01$ (note z-distribution can be
 used here thanks to the central limit theorem because $n=188$ is very
-large). So the original confidence interval was at 98% level, and in our
-code above we compute the full confidence interval
-`r sprintf("final confidence interval = [%.4f, %.4f]", ciLower, ciUpper)`
+large). So the original confidence interval was at a 98% confidence
+level, and in our code above we compute the
+`r sprintf("full confidence interval = [%.3f, %.3f]", ciLower, ciUpper)`
 
 **\
-e)**
+1 e)**
 
 ```{r}
-prop.test(c(34, 28), c(95, 93))
-#prop.test(c(34, 28), c(95, 93))
+res = prop.test(c(34, 28), c(95, 93)); printPval(res$p.value)
 ```
 
 Considering male and female babies to be two separate populations, we'll
 call a "success" when a baby is born \< 2600 grams. So we do a
 proportion test comparing the "successes" of each respective population
-($34/95$ vs $28/93$), and the resulting p-value $p=0.5007 > 0.05$
-indicates we fail to reject the $H_0$ that the proportion of babies born
-\< 2600 grams differs between the male and female populations.
-
-So the expert's claim, is rejected (this conclusion is the best we can
-do with the data we have).
+($34/95$ vs $28/93$), and the resulting
+`r print(sprintf("p-value = %.3f", res$p.value))` $> 0.05$ indicates we
+fail to reject the $H_0$ that the proportion of babies born \< 2600
+grams differs between the male and female populations.
 
 ## Exercise 2: Cholesterol
 
-**a)**
+**2 a)**
 
-```{r,echo=FALSE,fig.height=3.5}
+```{r,echo=FALSE,fig.width=4.1}
 data = read.table("cholesterol.txt", header=T)
-
-plot(data$Before, data$After8weeks, main="Scatter Plot of Cholestrol Before vs After Treatment", xlab="Cholestrol Before (mmol/L)", ylab="Cholestrol After (mmol/L)")
-
-# checking normality:
-par(mfrow=c(1,2))
-hist(data$Before, freq=F)
-qqnorm(data$Before)
-shapiro.test(data$Before)
-
-hist(data$After8weeks, freq=F)
-qqnorm(data$After8weeks)
-shapiro.test(data$After8weeks)
+plot(data$Before, data$After8weeks, main="Scatter Plot: Cholestrol Before vs After", xlab="Cholesterol Before (mmol/L)", ylab="Cholestrol After (mmol/L)", xlim=c(3,9), ylim=c(3,9))
+abline(0, 1, col = 'red') # plot y=x for reference
 ```
 
-Based on the histograms, qqplots and shapiro-Wilk normality test results
+```{r,fig.height=3.5}
+par(mfrow=c(1,2))
+pval = checkNorm(data$Before, "Before", unit="mmol/L")
+pval = checkNorm(data$After8weeks, "After", unit="mmol/L")
+```
+
+Based on the histograms, qqplots and Shapiro-Wilk normality test results
 (both variables having $p>0.05$), both variables (`Before`,
 `After8Weeks`) appear to be normally distributed.
 
-As both variables appear to be normal, we can use the pearson's
-correlation test (instead of spearman's) to test the correlation between
+As both variables appear to be normal, we can use the Pearson's
+correlation test (instead of Spearman's) to test the correlation between
 them.
 
 ```{r}
-cor.test(data$Before, data$After8weeks)
+res = cor.test(data$Before, data$After8weeks)
+sprintf("correlation = %.3f", res[[4]])
 ```
 
-The pearson's correlation test produces a correlation coefficient of
-$0.9909$, which is very close to 1.0, which suggests that indeed there
-is a strong positive correlation between the cholestrol levels `Before`
-and `After8Weeks` .
+The Pearson's correlation test produces a correlation coefficient of
+`r sprintf("%.3f", res[[4]])`, which is very close to 1.0, which
+suggests that indeed there is a strong positive correlation between the
+cholesterol levels `Before` and `After8Weeks`.
 
-**b)**
+Based on the scatter plot there appears to be no inconsistencies
+(outliers) in the dataset.
+
+**2 b)**
 
 In this experiment, the data are paired because a given index $i$ into
 the two variables, contains a value measured from the same experimental
@@ -225,21 +245,27 @@ unit (person) before and after receiving a treatment (a low fat diet in
 this case).
 
 To investigate whether the diet had an effect, we can use a paired
-t-test, and a sign test.
-
-In this experiment, the data are paired as each experimental unit
-(person) had their cholesterol measured before and after treatment.
-
-TODO: explain $H_0$
+t-test (due to normality), and a sign test (which makes no assumptions).
+The null hypothesis, $H_0$: is that the difference between `Before` and
+`After8Weeks` is 0 (there's no effect).
 
 ```{r}
+res = t.test(data$After8weeks, y=data$Before, alt="two.sided", paired=TRUE)
+printPval(res$p.value)
 
+difference = data$After8weeks - data$Before
+res = binom.test(sum(difference < 0), length(difference), p=0.5, alt="two.sided")
+printPval(res$p.value)
 ```
 
-Permutation test could also be used here because we have two paired
+The p-values $\approx 0 < 0.05$ for both tests, so there's sufficient
+evidence to support the claim that the diet does have an effect on
+cholesterol level.
+
+The Permutation test could also be used here because we have two paired
 samples, and no assumptions are needed.
 
-**c)**
+**2 c)**
 
 Based on the sample of cholesterol after 8 weeks, we can compute a CI
 for the population's average using:
@@ -250,7 +276,7 @@ $$
 
 And given the uniform distribution $unif(3, \theta)$ has mean
 $\mu = \frac{\theta+3}{2} \rightarrow \theta = 2*\mu+3$, so we can
-compute theta from our CI for xbar.
+compute theta from our CI for $\bar{x}$.
 
 ```{r}
 summary(data$After8weeks)
@@ -260,58 +286,55 @@ n = length(data$After8weeks)
 
 m = qt(0.975, df=n-1) * (s / sqrt(n))
 # compute CI for \bar{x}
-xBarLow = xbar - m
-xBarHigh = xbar + m
-sprintf("CI for xbar = [%.4f, %.4f]", xBarLow, xBarHigh)
+xBarLow = xbar - m; xBarHigh = xbar + m
+sprintf("CI for xbar = [%.3f, %.3f]", xBarLow, xBarHigh)
 
 # use results to compute CI for \theta
-thetaLow = 2 * xBarLow - 3
-thetaHigh = 2 * xBarHigh - 3
-sprintf("CI for theta = [%.4f, %.4f]", thetaLow, thetaHigh)
+thetaLow = 2 * xBarLow - 3; thetaHigh = 2 * xBarHigh - 3
+sprintf("CI for theta = [%.3f, %.3f]", thetaLow, thetaHigh)
 ```
 
 This CI can be slightly improved, because given the max value in
-After8Weeks is 7.6700, we know that $\theta$ must be $\ge 7.600$ in
+After8Weeks is 7.6700, we know that $\theta$ must be $\ge 7.670$ in
 order to have generated this data.
 
 So we can slightly adjust our CI to be:
 
 ```{r}
-sprintf("max(data$After8weeks) = %.4f", max(data$After8weeks))
-sprintf("improved CI = [%.4f, %.4f]",  max(data$After8weeks), thetaHigh)
+sprintf("max(data$After8weeks) = %.3f", max(data$After8weeks))
+sprintf("improved CI = [%.3f, %.3f]",  max(data$After8weeks), thetaHigh)
 ```
 
-**d)**
+**2 d)**
 
-```{r}
-# returns TRUE if X ~Unif(3, theta) is plausible (p > 0.05)
-doBootstrap = function (x, theta, makePlot=FALSE) {
-  n = length(x)
-  t = max(x)
-  B = 4000
-  tstar = numeric(B)
-  for (i in 1:B) {
-    xstar = runif(n, min=3, max=theta)
-    tstar[i] = max(xstar)
-  }
-  
-  pl = sum(tstar<t) / B
-  pr = sum(tstar>t) / B
-  p = 2 * min(pl, pr) # e.g. 0.038
-  
-  if (makePlot) {
-  # make histogram:
+```{=html}
+<!--#
+# optionally add to doBootstrap for debugging
+if (makePlot) {
     hist(tstar,prob=T, main="Histogram of tstar", freq=F)
     lines(rep(t,2), c(0,0.03), col="red", lwd=2)
     axis(1,t,expression(paste("t")))
     print(sprintf("p = %.4f", p))
   }
+-->
+```
+```{r, fig.height=3}
+# returns TRUE if X ~Unif(3, theta) is plausible (meaning p > 0.05)
+doBootstrap = function (x, theta, makePlot=FALSE) {
+  n = length(x); t = max(x); B = 4000
+  tstar = numeric(B)
+  for (i in 1:B) {
+    xstar = runif(n, min=3, max=theta)
+    tstar[i] = max(xstar)
+  }
+  pl = sum(tstar<t) / B; pr = sum(tstar>t) / B
+  p = 2 * min(pl, pr) # e.g. 0.038
   return(data.frame(theta=theta, p=p, valid=(p>=0.05)))
 }
 
 results = NULL
 for (theta in seq(3,12,0.25)){
-  cur = doBootstrap(data$After8weeks, theta, makePlot=FALSE)
+  cur = doBootstrap(data$After8weeks, theta)
   if (is.null(results)) {
     results = cur
   } else {
@@ -319,27 +342,32 @@ for (theta in seq(3,12,0.25)){
   }
 }
 plot(results$theta, results$p, main="P value vs Theta")
-# print signficant results
-dplyr::filter(results, p>0.05)
-#sprintf("res = %d", res)
+abline(h = 0.05, col = "red") # plot y=0.05 for reference
+dplyr::filter(results, p>0.05) # print signficant results
 ```
 
 <!--# TODO: undestand why you do 2 * min(pl, pr) -->
+
+Based on the results for $\theta \in [7.75, 8.75]$ we fail to reject
+$H_0$. (Note that we tested $\theta$ values at intervals of every 0.25,
+so we can only comment on intervals that are a multiple of 0.25).
 
 You could use the Kolmogorv-Smirnov test here as well, by generating a
 sample of values $(Y_1, …, Y_n) \sim Unif(3, \theta)$ for a given
 $\theta$, allowing you to evaluate if the original data sample could
 also be from the same distribution. Technically you could run this test
-many times, for many generated samples \$Y\$, allowing you to more
-robustly verify the results (as the particular values of $Y$).
+many times, for many generated samples $Y$, allowing you to more
+robustly verify the results.
 
-**e)**
+**2 e)**
 
 ```{r}
 res = binom.test(sum(data$After8weeks >= 6), length(data$After8weeks), p=0.5, alt="less")
+printPval(res$p.value)
 ```
 
-The p-value from the sign-test is `r res$p.value` \> 0.05 so we fail to
+The p-value from the sign-test is
+`r print(sprintf("p-value = %.3f", res$p.value))` \> 0.05 so we fail to
 reject $H_0: m \ge 6$.
 
 To test if the fraction of cholesterol levels After8weeks less than 4.5
@@ -349,16 +377,18 @@ percentile). This test is implemented as a binomial test with $p=0.25$.
 
 ```{r}
 res = binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="l")
+printPval(res$p.value)
 #binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="g")
 ```
 
-The p-value from the sign-test is `r res$p.value` \> 0.05 so there's not
+The p-value from the sign-test is
+`r print(sprintf("p-value = %.3f", res$p.value))` \> 0.05 so there's not
 enough evidence to reject $H_0$ (that the fraction of the cholesterol
 levels after 8 weeks of low fat diet less than 4.5 is $\le 25\%$).
 
 ## Exercise 3: Diet
 
-**a)**
+**3 a)**
 
 ```{r}
 data = read.table("diet.txt", header=T)
@@ -417,17 +447,11 @@ The results of the sign test with p=`r res$p.value` \< 0.05 led us to
 reject the $H_0: m \le 0$ (that the median difference in weight before
 and after the diet is $\le 0$).
 
-**b)**
+**3 b)**
 
 First we check for normality in the diet datasets:
 
 ```{r}
-# checking normality
-checkNorm = function(data, name) {
-  hist(data, main=sprintf("histogram of %s", name))
-  qqnorm(data, main=sprintf("Normal qqplot of %s", name))
-  shapiro.test(data)
-}
 par(mfrow = c(1, 2))
 checkNorm(diet1$weightlost, "Diet 1"); checkNorm(diet2$weightlost, "Diet 2"); checkNorm(diet3$weightlost, "Diet 3"); 
 ```
@@ -455,14 +479,14 @@ print("summary(dietaov):"); summary(dietaov)
 print("anova:"); danova
 ```
 
-The p-value from ANOVA $0.003229 < 0.05$ suggests that diet does have a
+The p-value from ANOVA $0.003 < 0.05$ suggests that diet does have a
 significant effect on weight loss.
 
 All 3 diets appear to lead to weight lost (based on their average
 values, which can be seen by adding the intercept (diet1's mean), to the
 respective $\alpha$ values for diet2 and diet3. Also diet3 appeared to
 be the best for losing weight, with the highest average weight loss of
-`p mean(diet1$weightlost)`.
+`r mean(diet1$weightlost)`.
 
 The Kruskal-Wallis test can be applied here because $n_i > 5$ for all
 diet groups, and the test doesn't rely on normality so we don't have to
@@ -472,7 +496,7 @@ be concerned about normality.
 
 ```
 
-**c**:
+**3 c**:
 
 ```{r}
 # diet, gender
@@ -496,7 +520,7 @@ print("anova:"); ganova
 <!-- TODO: interpret interaction plots -->
 
 The p-value for interaction, $0.0930 > 0.05$, indicates we fail to
-reject $H_{AB}$, so we need to run ANOVA again with a model that doesnt'
+reject $H_{AB}$, so we need to run ANOVA again with a model that doesn't
 include interaction between the diet and gender variables.
 
 ```{r}
@@ -513,7 +537,7 @@ Based on the ANOVA results, we fail to reject the null hypothesis $H_B$
 diet has no effect on weightlost), and as stated before there appears to
 be no interaction between gender and diet on weightlost.
 
-**e)**: Given the data, it seems more intuitive to us to use the
+**3 e)**: Given the data, it seems more intuitive to us to use the
 approach from b). This is because the data has these three defining
 diets, and the one-way ANOVA model allows for a more fine-grained
 approach into checking factor effects. This is further confirmed by
@@ -526,43 +550,40 @@ per c).
 
 ## Exercise 4: Yield of Peas
 
+**4 a)**
+
 ```{r}
 library(MASS)
 data = npk
 
 randomize = function(n_blocks){
   t = c(1,1,0,0)
-  
   t_temp = c()
-  
   for (x in 1:n_blocks){
     t_temp = c(t_temp, sample(t))
   }
   return(t_temp)
 }
 
-#Generate random columns where each block has random permutations of exactly two of each soil additive
-
+#Generate random columns where each block has random
+#  permutations of exactly two of each soil additive
 N = randomize(6)
 P = randomize(6)
 K = randomize(6)
 
 block = c()
-
 for (x in 1:6){
   block = c(block, rep(x,4))
-  
 }
-#data
 
 random_df = data.frame(block = block, N = N, P = P, K = K)
 head(random_df,4)
 tail(random_df,4)
-
 ```
 
-**b)**
+**4 b)**
 <!-- TODO: actually need to plot mean per block, and answer final part of question-->
+<!-- see lecture 5, slide 23 -->
 
 ```{r}
 N0 = dplyr::filter(data, N == 0)
@@ -570,12 +591,12 @@ N1 = dplyr::filter(data, N == 1)
 barplot(c(mean(N0$yield), mean(N1$yield)), names.arg=c("Nitrogen", "No Nitrogen"), main="Plots With Nitrogen vs Without", ylab="Average Yield", ylim=c(0,60))
 ```
 
-**c)**
+**4 c)**
+
+<!--# reference: lecture 5, slide 28 -->
 
 ```{r}
-
 naov = lm(yield~block+N, data=data)
-
 print("naov:"); naov
 print("summary(naov):"); summary(naov)
 nanova = anova(naov)
@@ -593,3 +614,68 @@ block design (not all possible combinations of soil additives were
 applied to each farm plot).
 
 <!-- TODO: -->
+
+**4 d)**
+
+```{r}
+# TODO: shorten output (for all anova stuff)...
+testModel = function(raov, coef) {
+  #print("raov:"); print(raov)
+  print("summary(raov):"); print(summary(raov))
+  ranova = anova(raov)
+  print("ranova:"); print(ranova)
+  print("")
+  print(ranova$coef[coef, "Pr(>|t|)"])
+  #summary(model)$coef["x1:x2", "Pr(>|t|)"]
+  
+}
+
+testModel(lm(yield~block*N+P+K, data=data), coef="block:N")
+#testModel(lm(yield~block*P+N+K, data=data))
+#testModel(lm(yield~block*K+N+P, data=data))
+
+```
+
+Based on the Anova results, there's no significant interaction between
+the block and any of the fertilizers (N, P, and K).
+
+```{r}
+raov = lm(yield~block+N+P+K, data=data)
+print("summary(raov):"); print(summary(raov))
+ranova = anova(raov)
+print("ranova:"); print(ranova)
+print("")
+print(ranova$coef[coef, "Pr(>|t|)"])
+```
+
+Based on the p-values from the ANOVA output, P is not a significant
+factor (effecting yield), while N, K, and block all appear to be
+significant $p<0.05$.
+
+From the models we investigated, the linear combination
+`lm(yield~block*N+P+K, data=data)` is our favorite because it doesn't
+include an interaction between block and any of the other factors (which
+was found to be insignificant). Therefore this model has a simpler level
+of complexity while still allowing the individual effects of N, P, and K
+to be evaluated.
+
+**4 e)**
+
+<!--# Reference: lecture 6, slide 17 -->
+
+<!--# fix for installing lme4 https://stackoverflow.com/a/63017900 -->
+
+```{r}
+library(lme4)
+#model = lmer(pain~treatment+sequence+period+(1|id), REML=FALSE,data=data)
+model1 = lmer(yield~N+(1|block), REML=FALSE,data=data)
+model2 = lmer(yield~(1|block), REML=FALSE,data=data)
+anova(model2, model1)
+```
+
+By the ANOVA comparison above, the p-value $0.005 < 0.05$, indicates
+there's sufficient evidence to support the claim that nitrogen (N)
+effects yield.
+
+Compared to the fixed effects model in **4 c)**, both models agree on
+supporting the claim of nitrogen effecting yield.
