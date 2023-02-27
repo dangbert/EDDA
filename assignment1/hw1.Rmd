@@ -499,8 +499,9 @@ data$gender = factor(data$gender)
 
 # remove people with no gender data
 data2 = dplyr::filter(data, !is.na(gender))
-interaction.plot(data2$gender, data2$diet, data2$weightlost)
-interaction.plot(data2$diet, data2$gender, data2$weightlost)
+interaction.plot(data2$gender, data2$diet, data2$weightlost, main ="Interaction plot: Diet vs. Gender (0=F, 1=M)" ,ylab = "Average Weightloss (kg)", xlab  = "Gender", trace.label = "Diet")
+
+interaction.plot(data2$diet, data2$gender, data2$weightlost, main ="Interaction plot: Gender (0=F, 1=M) vs. Diet", ylab="Average Weightloss (kg)", xlab = "Diet", trace.label = "Gender")
 
 # TODO: reset contrasts?
 #contrasts(data2$diet) = contr.treatment(length(levels(data2$diet)))
