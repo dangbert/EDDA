@@ -196,9 +196,9 @@ Considering male and female babies to be two separate populations, we'll
 call a "success" when a baby is born \< 2600 grams. So we do a
 proportion test comparing the "successes" of each respective population
 ($34/95$ vs $28/93$), and the resulting
-`r print(sprintf("p-value = %.3f", res$p.value))` $> 0.05$ indicates we
-fail to reject the $H_0$ that the proportion of babies born \< 2600
-grams differs between the male and female populations.
+`r sprintf("p-value = %.3f", res$p.value)` $> 0.05$ indicates we fail to
+reject the $H_0$ that the proportion of babies born \< 2600 grams
+differs between the male and female populations.
 
 ## Exercise 2: Cholesterol
 
@@ -343,21 +343,22 @@ for (theta in seq(3,12,0.25)){
 }
 plot(results$theta, results$p, main="P value vs Theta")
 abline(h = 0.05, col = "red") # plot y=0.05 for reference
-dplyr::filter(results, p>0.05) # print signficant results
+res = dplyr::filter(results, p>0.05); res # print signficant results
 ```
 
 <!--# TODO: undestand why you do 2 * min(pl, pr) -->
 
-Based on the results for $\theta \in [7.75, 8.75]$ we fail to reject
-$H_0$. (Note that we tested $\theta$ values at intervals of every 0.25,
-so we can only comment on intervals that are a multiple of 0.25).
+Based on the results for $\theta \in$
+`r sprintf("[%.3f, %.3f]", min(res$theta), max(res$theta))` we fail to
+reject $H_0$. (Note that we tested $\theta$ values at intervals of every
+0.25, so we can only comment on intervals that are a multiple of 0.25).
 
 You could use the Kolmogorv-Smirnov test here as well, by generating a
 sample of values $(Y_1, …, Y_n) \sim Unif(3, \theta)$ for a given
 $\theta$, allowing you to evaluate if the original data sample could
-also be from the same distribution. Technically you could run this test
-many times, for many generated samples $Y$, allowing you to more
-robustly verify the results.
+also be from the same distribution. You could also run this test many
+times (similar to a boostrap test), for many generated samples $Y$,
+allowing you to more robustly verify the results.
 
 **2 e)**
 
@@ -366,9 +367,8 @@ res = binom.test(sum(data$After8weeks >= 6), length(data$After8weeks), p=0.5, al
 printPval(res$p.value)
 ```
 
-The p-value from the sign-test is
-`r print(sprintf("p-value = %.3f", res$p.value))` \> 0.05 so we fail to
-reject $H_0: m \ge 6$.
+The p-value from the sign-test is `r sprintf("%.3f", res$p.value)` \>
+0.05 so we fail to reject $H_0: m \ge 6$.
 
 To test if the fraction of cholesterol levels After8weeks less than 4.5
 is at most 25%, we propose using a modified version of the sign test
@@ -381,16 +381,16 @@ printPval(res$p.value)
 #binom.test(sum(data$After8weeks < 4.5), length(data$After8weeks), p=0.25, alt="g")
 ```
 
-The p-value from the sign-test is
-`r print(sprintf("p-value = %.3f", res$p.value))` \> 0.05 so there's not
-enough evidence to reject $H_0$ (that the fraction of the cholesterol
-levels after 8 weeks of low fat diet less than 4.5 is $\le 25\%$).
+The p-value from the sign-test is `r sprintf("%.3f", res$p.value)` \>
+0.05 so there's not enough evidence to reject $H_0$ (that the fraction
+of the cholesterol levels after 8 weeks of low fat diet less than 4.5 is
+$\le 25\%$).
 
 ## Exercise 3: Diet
 
 **3 a)**
 
-```{r}
+```{r, fig.height=3}
 data = read.table("diet.txt", header=T)
 # compute weight lost
 data$weightlost = data$preweight - data$weight6weeks
@@ -411,17 +411,11 @@ stripchart(diet2$weightlost, main="Diet 2", ylab="Weight Lost (kg)", ylim=ylim, 
 stripchart(diet3$weightlost, main="Diet 3", ylab="Weight Lost (kg)", ylim=ylim, vertical=T)
 ```
 
-```{r}
+```{r, fig.height=4}
 par(mfrow=c(1,2))
-hist(data$preweight, freq=F)
-qqnorm(data$preweight, main="Normal QQ plot: preweight")
-shapiro.test(data$preweight)
-
-hist(data$weight6weeks, freq=F)
-qqnorm(data$weight6weeks, main="Normal QQ plot: weight6weeks")
-shapiro.test(data$weight6weeks)
-
-boxplot(data.frame(preweight=data$preweight, weightweeks6=data$weight6weeks))
+pval = checkNorm(data$preweight, "preweight", unit="kg")
+pval = checkNorm(data$weight6weeks, "weight6weeks", unit="kg")
+boxplot(data.frame(preweight=data$preweight, weight6weeks=data$weight6weeks), names=c("preweight", "weight6weeks"), main="Weights Before vs After Diet")
 ```
 
 Based on the histograms, normal qq plots, and shapiro-wilk test results
@@ -567,10 +561,7 @@ randomize = function(n_blocks){
 
 #Generate random columns where each block has random
 #  permutations of exactly two of each soil additive
-N = randomize(6)
-P = randomize(6)
-K = randomize(6)
-
+N = randomize(6); P = randomize(6); K = randomize(6)
 block = c()
 for (x in 1:6){
   block = c(block, rep(x,4))
@@ -625,7 +616,6 @@ testModel = function(raov, coef) {
   print("")
   print(ranova$coef[coef, "Pr(>|t|)"])
   #summary(model)$coef["x1:x2", "Pr(>|t|)"]
-  
 }
 
 testModel(lm(yield~block*N+P+K, data=data), coef="block:N")
@@ -661,7 +651,7 @@ to be evaluated.
 
 <!--# Reference: lecture 6, slide 17 -->
 
-<!--# fix for installing lme4 https://stackoverflow.com/a/63017900 -->
+<!--# note: used fix for installing lme4 https://stackoverflow.com/a/63017900 -->
 
 ```{r}
 library(lme4)
@@ -675,5 +665,5 @@ By the ANOVA comparison above, the p-value $0.005 < 0.05$, indicates
 there's sufficient evidence to support the claim that nitrogen (N)
 effects yield.
 
-Compared to the fixed effects model in **4 c)**, both models agree on
+Compared to the fixed effects model in part 4c, both models agree on
 supporting the claim of nitrogen effecting yield.
