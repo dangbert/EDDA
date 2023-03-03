@@ -29,6 +29,14 @@ checkNorm = function(data, name, unit="") {
 printPval = function(pval) {
   print(sprintf("p-value = %.3f", pval))
 }
+
+conclude = function(pval, hypothesis, type="test") {
+  if (pval < 0.05) {
+    return(sprintf("the p-value $%.3f<0.05$ for this %s suggests is sufficient evidence to reject the $H_0$ (%s).", pval, type, hypothesis));
+  } else {
+    return(sprintf("the p-value $%.3f>0.05$ for this %s suggests there's insufficient evidence to reject the $H_0$ (%s).", pval, type, hypothesis));
+  }
+}
 ```
 
 Note: we made a function `checkNorm()` which prints a histogram, qqplot,
@@ -40,10 +48,120 @@ figures. We utilize both functions throughout this assignment.
 
 ### 1 a)
 
+TODO: check assumptions for ANOVA?
+
 ```{r}
 trees = read.table("treeVolume.txt", header=T)
-trees
+
+model = lm(volume~type, data=trees)
+print("summary:")
+summary(model)
+print("anova:")
+anova(model)
 ```
+
+The p-value $0.174<0.05$ for the type in the ANOVA analysis of the
+linear model, suggests there's insufficient evidence to reject the $H_0$
+(that tree type influences volume).
+
+```{r}
+oaks = dplyr::filter(trees, type == "oak")
+beeches  = dplyr::filter(trees, type != "oak")
+
+par(mfrow = c(1, 2))
+# making plots 
+checkNorm(oaks$volume, "oak")
+checkNorm(beeches$volume, "beech")
+
+mean(oaks$volume)
+mean(beeches$volume)
+
+res = t.test(oaks$volume, beeches$volume)
+printPval(res$p.value)
+```
+
+We can split the data into two samples of tree volume based on the tree
+types, and compare the means of the samples using a t-test to determine
+whether, based on this data, there is a significant difference in mean
+volume between the two tree types. As can be seen in the output of the
+t-test $0.166 > 0.05$, signifying once again that there is not enough
+evidence to reject the null hypothesis that the means of the samples are
+the same. This concurs with the results of the ANOVA.
+
+```{r}
+new_oak = data.frame(type="oak")
+new_beech = data.frame(type = "beech")
+predict(model, new_oak)
+predict(model, new_beech)
+
+```
+
+### 1 b)
+
+```{r}
+model = lm(volume~type*diameter + height, data=trees)
+res = anova(model)
+#trees
+```
+
+We built a linear model that added an interaction term between diameter
+and type,
+`r conclude(res["type:diameter", "Pr(>F)"], "that the influence of diameter on volume is the same for both tree types", type="term")`
+
+```{r}
+model = lm(volume~type*height + diameter, data=trees)
+res = anova(model)
+```
+
+Now running another linear model that includes an interaction term
+between height and type instead,
+`r conclude(res["type:height", "Pr(>F)"], "that the influence of height on volume is the same for both tree types", type="term")`
+
+TODO make a comment summarizing / generalizing the two results above.
+
+### 1 c)
+
+```{r}
+model = lm(volume~type+height+diameter, data=trees)
+print("summary:")
+summary(model)
+print("anova:")
+res = anova(model)
+res
+```
+
+Based on the ANOVA p-values, type is not a significant predictor for
+volume (p-value $0.143 > 0.05$), while height and diameter are
+significant (p-values less than 0.05). Diameter and height are both
+positively correlated with the volume, with diameter having the largest
+contribution (coefficient) of the two.
+
+<!--# TODO crispy code output -->
+
+### 1 d)
+
+We propose to transform the data to create a new column that contains
+the theoretical volume of a cylinder based on the tree's diameter and
+height.
+
+```{r}
+# create predictor as cylinderical volume
+trees$cylinder = trees$diameter * pi * trees$height
+
+model = lm(volume~cylinder, data=trees)
+print("summary:")
+summary(model)
+print("ANOVA:")
+anova(model)
+
+```
+
+After constructing a linear model for predicting the actual tree volume
+from our proposed cylindrical estimator, we see that the cylinder
+variable is a significant predictor of volume (p \< 0.05). However the
+adjusted $R^2$ value for this model is less than that of the model in
+part c), so while cylinder is a useful predictor, it's still inferior to
+using just the provided variables in the model.
 
 ## Exercise 2: Expenditure on criminal activities
 
@@ -51,7 +169,7 @@ trees
 
 ```{r}
 crimes = read.table("expensescrime.txt", header=T)
-crimes
+#crimes
 ```
 
 ## Exercise 3: Titanic
@@ -60,7 +178,7 @@ crimes
 
 ```{r}
 titanic = read.table("titanic.txt", header=T)
-titanic
+#titanic
 ```
 
 ## Exercise 4: Military Coups
@@ -69,5 +187,5 @@ titanic
 
 ```{r}
 coups = read.table("coups.txt", header=T)
-coups
+#coups
 ```
