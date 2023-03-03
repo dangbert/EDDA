@@ -1,0 +1,73 @@
+---
+title: "Assignment 1: Group 45"
+author: "Daniel Engbert, Rik Timmer, Koen van der Pool"
+date: "11 February 2023"
+output: pdf_document
+fontsize: 11pt
+highlight: tango
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, echo=FALSE}
+#options(digits=3)
+
+# helper function to check normality throughout this assignment
+checkNorm = function(data, name, unit="") {
+  xlab = name
+  if (unit != "") {
+    xlab = sprintf("%s (%s)", name, unit)
+  }
+  hist(data, main=sprintf("Histogram of %s", name), xlab=xlab)
+  qqnorm(data, main=sprintf("Normal qqplot of %s", name))
+  res = shapiro.test(data)
+  print(sprintf("Shapiro-Wilk normality p-value for %s: %.3f", name, res$p.value))
+  return(res$p.value)
+}
+
+printPval = function(pval) {
+  print(sprintf("p-value = %.3f", pval))
+}
+```
+
+Note: we made a function `checkNorm()` which prints a histogram, qqplot,
+and p-value from the shapiro-wilk normality test. And we made a function
+`printPval()` which simply prints a given p-value to 3 significant
+figures. We utilize both functions throughout this assignment.
+
+## Exercise 1: Trees
+
+### 1 a)
+
+```{r}
+trees = read.table("treeVolume.txt", header=T)
+trees
+```
+
+## Exercise 2: Expenditure on criminal activities
+
+### 1 a)
+
+```{r}
+crimes = read.table("expensescrime.txt", header=T)
+crimes
+```
+
+## Exercise 3: Titanic
+
+### 1 a)
+
+```{r}
+titanic = read.table("titanic.txt", header=T)
+titanic
+```
+
+## Exercise 4: Military Coups
+
+### 1 a)
+
+```{r}
+coups = read.table("coups.txt", header=T)
+coups
+```
