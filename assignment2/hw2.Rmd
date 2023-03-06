@@ -1,7 +1,7 @@
 ---
-title: "Assignment 1: Group 45"
+title: "Assignment 2: Group 45"
 author: "Daniel Engbert, Rik Timmer, Koen van der Pool"
-date: "11 February 2023"
+date: "03 March 2023"
 output: pdf_document
 fontsize: 11pt
 highlight: tango
@@ -11,7 +11,7 @@ editor_options:
 ---
 
 ```{r, echo=FALSE}
-#options(digits=3)
+options(digits=3) # e.g. for anova and summary() outputs...
 
 # helper function to check normality throughout this assignment
 checkNorm = function(data, name, unit="") {
@@ -48,37 +48,36 @@ figures. We utilize both functions throughout this assignment.
 
 ### 1 a)
 
-TODO: check assumptions for ANOVA?
+<!--# TODO: check assumptions for ANOVA regarding normality?? -->
 
 ```{r}
 trees = read.table("treeVolume.txt", header=T)
-
 model = lm(volume~type, data=trees)
-print("summary:")
-summary(model)
-print("anova:")
-anova(model)
+print("model coefficients:"); summary(model)$coefficients
+res = anova(model)
+sprintf("ANOVA p-value for type = %.3f", res["type", "Pr(>F)"])
 ```
 
-The p-value $0.174<0.05$ for the type in the ANOVA analysis of the
+The p-value $0.174>0.05$ for the type in the ANOVA analysis of the
 linear model, suggests there's insufficient evidence to reject the $H_0$
 (that tree type influences volume).
 
-```{r}
+```{r, fig.height=4.5, fig.width=4.5, echo=FALSE}
 oaks = dplyr::filter(trees, type == "oak")
-beeches  = dplyr::filter(trees, type != "oak")
-
-par(mfrow = c(1, 2))
+beeches = dplyr::filter(trees, type != "oak")
+par(mfrow = c(2, 2))
 # making plots 
-checkNorm(oaks$volume, "oak")
-checkNorm(beeches$volume, "beech")
+pval = checkNorm(oaks$volume, "oak")
+pval = checkNorm(beeches$volume, "beech")
 
-mean(oaks$volume)
-mean(beeches$volume)
+sprintf("oak mean volume = %.3f, beech mean volume = %.3f", mean(oaks$volume), mean(beeches$volume))
 
-res = t.test(oaks$volume, beeches$volume)
-printPval(res$p.value)
+# TODO: we don't have to actually do this t test
+#res = t.test(oaks$volume, beeches$volume)
+#printPval(res$p.value)
 ```
+
+<!--# TODO: beech isn't normal, oak appears somewhat doubtful, so maybe we can say "it could be done in principle IF the data was normal, but that's not the case here..." -->
 
 We can split the data into two samples of tree volume based on the tree
 types, and compare the means of the samples using a t-test to determine
@@ -89,11 +88,9 @@ evidence to reject the null hypothesis that the means of the samples are
 the same. This concurs with the results of the ANOVA.
 
 ```{r}
-new_oak = data.frame(type="oak")
-new_beech = data.frame(type = "beech")
-predict(model, new_oak)
-predict(model, new_beech)
-
+new_oak = data.frame(type="oak"); new_beech = data.frame(type = "beech")
+pred1 = predict(model, new_oak); pred2 = predict(model, new_beech)
+sprintf("predicted volumes: oak = %.3f, beech = %.3f", pred1, pred2)
 ```
 
 ### 1 b)
@@ -101,7 +98,7 @@ predict(model, new_beech)
 ```{r}
 model = lm(volume~type*diameter + height, data=trees)
 res = anova(model)
-#trees
+sprintf("ANOVA p-value for type:diameter = %.3f", res["type:diameter", "Pr(>F)"])
 ```
 
 We built a linear model that added an interaction term between diameter
@@ -111,24 +108,31 @@ and type,
 ```{r}
 model = lm(volume~type*height + diameter, data=trees)
 res = anova(model)
+sprintf("ANOVA p-value for type:diameter = %.3f", res["type:height", "Pr(>F)"])
 ```
 
 Now running another linear model that includes an interaction term
 between height and type instead,
 `r conclude(res["type:height", "Pr(>F)"], "that the influence of height on volume is the same for both tree types", type="term")`
 
-TODO make a comment summarizing / generalizing the two results above.
+So based on the results from our two models above, there's insufficient
+evidence to suggest that the influences of diameter and height aren't
+similar for both tree types.
 
 ### 1 c)
 
+We construct a linear model to investigate how diameter, height and type
+influence volume.
+
 ```{r}
 model = lm(volume~type+height+diameter, data=trees)
-print("summary:")
-summary(model)
-print("anova:")
-res = anova(model)
-res
+print("model coefficients:"); summary(model)$coefficients
+print("anova:"); res = anova(model); res
 ```
+
+<!--# TODO crispy code output^ -->
+
+<!--# TODO: is the conclusion about type correct? -->
 
 Based on the ANOVA p-values, type is not a significant predictor for
 volume (p-value $0.143 > 0.05$), while height and diameter are
@@ -136,32 +140,51 @@ significant (p-values less than 0.05). Diameter and height are both
 positively correlated with the volume, with diameter having the largest
 contribution (coefficient) of the two.
 
-<!--# TODO crispy code output -->
+```{r}
+# build better model where type isn't considered
+modelC = lm(volume~height+diameter, data=trees)
+
+avgTree = data.frame(height=mean(trees$height), diameter=mean(trees$diameter))
+pred = predict(modelC, avgTree)
+sprintf("predicted volume of average tree = %.3f", pred)
+# mean(trees$volume) # this also gives the same result as expected
+
+r2 = summary(modelC)$r.squared; ar2 = summary(modelC)$adj.r.squared
+sprintf("modelC: R^2 = %.3f, Adj. R^2 = %.3f", r2, ar2)
+```
+
+Using the resulting model, the volume of a tree with the average height
+and diameter is predicted to be `r sprintf("%.3f", pred)` .
 
 ### 1 d)
 
 We propose to transform the data to create a new column that contains
-the theoretical volume of a cylinder based on the tree's diameter and
-height.
+the volume of a (theoretical) cylinder based on the tree's diameter and
+height. (Note we omit tree type from the model as we found it to not be
+a significant predictor above).
+
+<!--# TODO: ask what units are, because this volume calculation should consider them?? -->
 
 ```{r}
 # create predictor as cylinderical volume
 trees$cylinder = trees$diameter * pi * trees$height
 
-model = lm(volume~cylinder, data=trees)
-print("summary:")
-summary(model)
-print("ANOVA:")
-anova(model)
-
+modelD = lm(volume~cylinder, data=trees)
+print("model coefficients:"); summary(modelD)$coefficients
+r2 = summary(modelD)$r.squared; ar2 = summary(modelD)$adj.r.squared
+sprintf("model: R^2 = %.3f, Adj. R^2 = %.3f", r2, ar2)
+print("ANOVA:"); anova(model)
 ```
 
 After constructing a linear model for predicting the actual tree volume
 from our proposed cylindrical estimator, we see that the cylinder
 variable is a significant predictor of volume (p \< 0.05). However the
-adjusted $R^2$ value for this model is less than that of the model in
-part c), so while cylinder is a useful predictor, it's still inferior to
-using just the provided variables in the model.
+adjusted $R^2$ values (and the regular $R^2$ values) for this model are
+less than that of the model in part c), so while cylinder is a useful
+predictor, it's still inferior to using just the provided height and
+diameter variables in the model.
+
+<!--# TODO: we could also argue that the cylinder field summarizes / reduces the dimensionality from R^2 -> R, so it's arguably a simpler model? -->
 
 ## Exercise 2: Expenditure on criminal activities
 
