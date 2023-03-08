@@ -333,15 +333,7 @@ mse2.lasso=mean((y.test-lasso.pred2)^2); mse2.lasso
 ```
 <!--# REMINDER: The output of the lasso model changes with every run, so make sure the conclusion fits with the output!!! -->
 
-As we can see from the lambdas calculated by the model above, for the minimum error, the relevant variables are bad, crime, lawyers, and employ. To obtain a reduced model that is within one standard error of the minimum, we can take into account only bad, lawyers, and employ.
-
-
-```{r}
-library(glmnet)
-
-
-
-```
+As we can see from the lambdas calculated by the model above, for the minimum error, the relevant variables are bad, crime, lawyers, and employ. To obtain a reduced model that is within one standard error of the minimum, we can take into account only bad, lawyers, and employ. In general the model is very similar to the one in b). While in b), the variables that were collinear could have been added to the model to improve the R^2, we chose not to do so because the improvement was marginal. The lasso model does something similar, in that it selects one of the aforementioned variables as the primary factor (which has a large coefficient), and the other (believed to be collinear) variables that are shown as relevant by the lasso model have very small coefficients, because as we saw, they had very little effect on the R^2 in b).
 
 ## Exercise 3: Titanic
 
