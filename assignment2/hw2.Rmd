@@ -362,9 +362,9 @@ titanic$Sex = factor(titanic$Sex)
 library(plyr)
 # round age to nearest 10 years
 #   https://stackoverflow.com/a/6466894
-titanic$Ager = round_any(titanic$Age, 10)
-#titanic$Ager = factor(titanic$Ager)
-titanic
+titanic$Ager = round_any(titanic$Age, 20)
+titanic$Ager = factor(titanic$Ager)
+titanic$Age2 = titanic$Age^2
 
 print("total number of individuals for each combination of class and gender:")
 tot = xtabs(~PClass+Sex, data=titanic)
@@ -374,27 +374,98 @@ print("Surival rate by class and gender combinations:")
 totc = xtabs(Survived~PClass+Sex, data=titanic)
 round(totc/tot, 2)
 
-#plot(titanic$age, y=titanic$survival, xlim=c(0, 100))
+#plot(titanic$Age, y=titanic$Survived, xlim=c(0, 100))
 totage = xtabs(~Age, data=titanic)
-barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Cancer by Age group", xlab="Age Group", ylab="Cancer Ratio")
+barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Survival by Age Group", xlab="Age Group", ylab="Survival Ratio")
 
 # build logistic regression model
 #roundUp = function(x) 10^ceiling(log10(x))
 
-
-
-#guy = data.frame(Age=55, Sex=)
-
 model = glm(Survived~Age+Sex+PClass,data=titanic, family=binomial)
 summary(model)
 
+plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival", xlab="Age (years)",main="Survival Odds of a First Class Female vs. Age")
+
+#res$coefficients['(Intercept)', 'Pr(>|z|)']
+
+
+
 ```
+
+<!--# TODO: Look at going for age vs ager when attempting to interpret odds -->
+
+In the model above, the intercept can be interpreted as a female who
+traveled in 1st class. We can see that other classes (namely 2nd and
+3rd) lower the odds of survival by the negative coefficients, where 3rd
+class has a larger impact than 2nd. Similarly, an increase in age has a
+negative impact on survival odds, however the impact is low because of
+the parabolic shape of the graph shown above. How we interpret this is
+that the fact that very young and very old people have the highest
+survival rates are balancing each other out to form a coefficient that
+is close to 0, which inaccurately represents the actual relationship
+between age and survival, because it is clear that it does have an
+effect. Finally the odds of survival of a male are also significantly
+lower than that of a female, as shown by the negative coefficient.
+
+### 3 b)
+
+```{r}
+
+ageclass_model = glm(Survived~Age*PClass+Sex,data=titanic, family=binomial)
+summary(ageclass_model)
+
+agesex_model = glm(Survived~Age*Sex+PClass,data=titanic, family=binomial)
+summary(agesex_model)
+
+male1 = data.frame(Age=55, Sex = "male", PClass = "1st")
+male2 = data.frame(Age=55, Sex = "male", PClass = "2nd")
+male3 = data.frame(Age=55, Sex = "male", PClass = "3rd")
+female1 = data.frame(Age=55, Sex = "female", PClass = "1st")
+female2 = data.frame(Age=55, Sex = "female", PClass = "2nd")
+female3 = data.frame(Age=55, Sex = "female", PClass = "3rd")
+
+predict(model,female1, type="response")
+predict(model,female2, type="response")
+predict(model,female3, type="response")
+predict(model,male1, type="response")
+predict(model,male2, type="response")
+predict(model,male3, type="response")
+
+
+```
+
+Given the results of the two models produced here, as well as the one
+from 3a), we will select the model that considers the interaction
+between sex and age, given that the model found that the interaction was
+significant (the model in 3a) found that sex and age by themselves were
+also significant). Furthermore, the model that considered the
+interaction between age and class found that the interaction was not
+significant ($P > 0.05$ for both 2nd class and 3rd class).
+
+The estimates for the probability of survival of each of the
+combinations of factors is as shown below:
 
 <!--# TODO: larger bin size for barplot -->
 
 <!--# TODO: ask TA how to interpret intercept -->
 
 <!--# TODO: is it okay to round ages? -->
+
+<!--# TODO: clean up after me pls daddy Dan -->
+
+### 3 c)
+
+We propose to do k-fold cross-validation, using 10% of the data in each
+fold, and calculating the average prediction accuracy per combination of
+factor levels. We would use a slightly modified version of the model
+from 3b), namely
+`glm(Survived~Ager*Sex+PClass,data=titanic, family=binomial)` , where
+the difference would be that the age would be split into several groups
+(represented as the variable `Ager`.
+
+To be able to predict for the odds resulting from the model, we would
+use a threshold of 2, where if the odds were above 2, the subject would
+be predicted as survived and not survived otherwise.
 
 ## Exercise 4: Military Coups
 
