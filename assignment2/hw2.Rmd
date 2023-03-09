@@ -297,43 +297,57 @@ would be between \$0 and \$642,000.
 ### 2 d)
 
 ```{r}
-x=as.matrix(crimes[,-1])
-x=x[,-1]
-y=crimes[,2]
-x
+#set.seed(444) # ensuring results don't change each time its run
+x = as.matrix(crimes[,-1]) # remove states column
+x = x[,-1] # remove expenditure
+y = crimes[,2]
+#x
 
+train = sample(1:nrow(x),0.67*nrow(x))
+x.train = x[train,]; y.train = y[train]
+x.test = x[-train,]; y.test = y[-train] 
 
-train=sample(1:nrow(x),0.67*nrow(x))
-x.train=x[train,]; y.train=y[train]
-x.test=x[-train,]; y.test = y[-train] 
-
-lm.model=lm(expend~bad+crime+lawyers+employ+pop,data=crimes,subset=train)
-y.predict.lm=predict(lm.model,newdata=crimes[-train,])
-mse.lm=mean((y.test-y.predict.lm)^2); mse.lm
-
-mse.lm
+lm.model = lm(expend~bad+crime+lawyers+employ+pop,data=crimes, subset=train)
+y.predict.lm = predict(lm.model,newdata=crimes[-train,])
+mse.lm = mean((y.test-y.predict.lm)^2)
+sprintf("linear model mse = %.3f", mse.lm)
 
 library(glmnet) 
-lasso.model=glmnet(x.train,y.train,alpha=1)
-lasso.cv=cv.glmnet(x.train,y.train,alpha=1,type.measure="mse",nfolds=5)
+lasso.model = glmnet(x.train,y.train,alpha=1)
+lasso.cv = cv.glmnet(x.train,y.train,alpha=1,type.measure="mse",nfolds=5)
 
 plot(lasso.model,label=T,xvar="lambda")
-
 plot(lasso.cv) 
 
-lambda.min=lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se; 
-lambda.min; lambda.1se 
+lambda.min = lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se; 
+sprintf("lambda.min = %.3f, lambda.1se = %.3f", lambda.min, lambda.1se)
+
 coef(lasso.model,s=lasso.cv$lambda.min) 
 coef(lasso.model,s=lasso.cv$lambda.1se) 
 
-lasso.pred1=predict(lasso.model,s=lambda.min,newx=x.test) 
-lasso.pred2=predict(lasso.model,s=lambda.1se,newx=as.matrix(x.test))
-mse1.lasso=mean((y.test-lasso.pred1)^2); mse1.lasso
-mse2.lasso=mean((y.test-lasso.pred2)^2); mse2.lasso
+lasso.pred1 = predict(lasso.model,s=lambda.min,newx=x.test) 
+lasso.pred2 = predict(lasso.model,s=lambda.1se,newx=as.matrix(x.test))
+mse1.lasso = mean((y.test-lasso.pred1)^2)
+mse2.lasso = mean((y.test-lasso.pred2)^2)
+sprintf("mse1 = %.3f, mse2 = %.3f", mse1.lasso, mse2.lasso)
 ```
+
 <!--# REMINDER: The output of the lasso model changes with every run, so make sure the conclusion fits with the output!!! -->
 
-As we can see from the lambdas calculated by the model above, for the minimum error, the relevant variables are bad, crime, lawyers, and employ. To obtain a reduced model that is within one standard error of the minimum, we can take into account only bad, lawyers, and employ. In general the model is very similar to the one in b). While in b), the variables that were collinear could have been added to the model to improve the R^2, we chose not to do so because the improvement was marginal. The lasso model does something similar, in that it selects one of the aforementioned variables as the primary factor (which has a large coefficient), and the other (believed to be collinear) variables that are shown as relevant by the lasso model have very small coefficients, because as we saw, they had very little effect on the R^2 in b).
+<!--# TODO: ask TA about interpreting result -->
+
+As we can see from the lambdas calculated by the model above, for the
+minimum error, the relevant variables are bad, crime, lawyers, and
+employ. To obtain a reduced model that is within one standard error of
+the minimum, we can take into account only bad, lawyers, and employ. In
+general the model is very similar to the one in b). While in b), the
+variables that were collinear could have been added to the model to
+improve the \$R\^2\$, we chose not to do so because the improvement was
+marginal. The lasso model does something similar, in that it selects one
+of the aforementioned variables as the primary factor (which has a large
+coefficient), and the other (believed to be collinear) variables that
+are shown as relevant by the lasso model have very small coefficients,
+because as we saw, they had very little effect on the $R^2$ in b).
 
 ## Exercise 3: Titanic
 
@@ -341,8 +355,46 @@ As we can see from the lambdas calculated by the model above, for the minimum er
 
 ```{r}
 titanic = read.table("titanic.txt", header=T)
-#titanic
+titanic$PClass = factor(titanic$PClass)
+titanic$Sex = factor(titanic$Sex)
+#titanic$Survived = factor(titanic$Survived)
+
+library(plyr)
+# round age to nearest 10 years
+#   https://stackoverflow.com/a/6466894
+titanic$Ager = round_any(titanic$Age, 10)
+#titanic$Ager = factor(titanic$Ager)
+titanic
+
+print("total number of individuals for each combination of class and gender:")
+tot = xtabs(~PClass+Sex, data=titanic)
+tot
+
+print("Surival rate by class and gender combinations:")
+totc = xtabs(Survived~PClass+Sex, data=titanic)
+round(totc/tot, 2)
+
+#plot(titanic$age, y=titanic$survival, xlim=c(0, 100))
+totage = xtabs(~Age, data=titanic)
+barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Cancer by Age group", xlab="Age Group", ylab="Cancer Ratio")
+
+# build logistic regression model
+#roundUp = function(x) 10^ceiling(log10(x))
+
+
+
+#guy = data.frame(Age=55, Sex=)
+
+model = glm(Survived~Age+Sex+PClass,data=titanic, family=binomial)
+summary(model)
+
 ```
+
+<!--# TODO: larger bin size for barplot -->
+
+<!--# TODO: ask TA how to interpret intercept -->
+
+<!--# TODO: is it okay to round ages? -->
 
 ## Exercise 4: Military Coups
 
