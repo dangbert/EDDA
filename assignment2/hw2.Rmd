@@ -48,7 +48,7 @@ figures. We utilize both functions throughout this assignment.
 
 ### 1 a)
 
-<!--# TODO: check assumptions for ANOVA regarding normality?? -->
+<!--# TODO: check assumptions for ANOVA regarding normality -->
 
 ```{r}
 trees = read.table("treeVolume.txt", header=T)
@@ -72,8 +72,8 @@ pval = checkNorm(beeches$volume, "beech")
 
 sprintf("oak mean volume = %.3f, beech mean volume = %.3f", mean(oaks$volume), mean(beeches$volume))
 
-# TODO: we don't have to actually do this t test
-#res = t.test(oaks$volume, beeches$volume)
+# note:: we don't have to actually do this t test
+res = t.test(oaks$volume, beeches$volume)
 #printPval(res$p.value)
 ```
 
@@ -125,14 +125,15 @@ We construct a linear model to investigate how diameter, height and type
 influence volume.
 
 ```{r}
-model = lm(volume~type+height+diameter, data=trees)
+#model = lm(volume~type+height+diameter, data=trees)
+model = lm(volume~diameter+height+type, data=trees)
 print("model coefficients:"); summary(model)$coefficients
 print("anova:"); res = anova(model); res
 ```
 
 <!--# TODO crispy code output^ -->
 
-<!--# TODO: is the conclusion about type correct? -->
+<!--# TODO: is the conclusion about type correct? the order of variables appears to affect the results... -->
 
 Based on the ANOVA p-values, type is not a significant predictor for
 volume (p-value $0.143 > 0.05$), while height and diameter are
@@ -167,22 +168,23 @@ a significant predictor above).
 
 ```{r}
 # create predictor as cylinderical volume
-trees$cylinder = trees$diameter * pi * trees$height
+#trees$cylinder = trees$diameter * pi * trees$height
+trees$cylinder = pi * (trees$diameter / 2)^2 * trees$height
 
 modelD = lm(volume~cylinder, data=trees)
 print("model coefficients:"); summary(modelD)$coefficients
 r2 = summary(modelD)$r.squared; ar2 = summary(modelD)$adj.r.squared
 sprintf("model: R^2 = %.3f, Adj. R^2 = %.3f", r2, ar2)
-print("ANOVA:"); anova(model)
+print("ANOVA:"); anova(modelD)
 ```
 
 After constructing a linear model for predicting the actual tree volume
 from our proposed cylindrical estimator, we see that the cylinder
-variable is a significant predictor of volume (p \< 0.05). However the
-adjusted $R^2$ values (and the regular $R^2$ values) for this model are
-less than that of the model in part c), so while cylinder is a useful
-predictor, it's still inferior to using just the provided height and
-diameter variables in the model.
+variable is a significant predictor of volume (p \< 0.05). The adjusted
+$R^2$ values (and the regular $R^2$ values) for this model are both
+greater than that of the model in part c), so this model appears to be
+superior to using just the provided height and diameter variables in the
+model.
 
 <!--# TODO: we could also argue that the cylinder field summarizes / reduces the dimensionality from R^2 -> R, so it's arguably a simpler model? -->
 
@@ -190,7 +192,7 @@ diameter variables in the model.
 
 ### 2 a)
 
-```{r, fig.height=7}
+```{r, fig.height=4.5}
 crimes = read.table("expensescrime.txt", header=T)
 pairs(crimes[,-1])
 crimes$state = factor(crimes$state)
@@ -207,9 +209,6 @@ anova(model)
 
 # sorting by population
 #crimes[order(crimes$pop, decreasing=TRUE),]
-
-
-
 #crimes
 ```
 
@@ -245,7 +244,7 @@ coefficient of at least 0.832 between each other.
 
 ```{r}
 evalModel = function(model, name) {
-  print(sprintf("adding var '%s':", name))
+  cat(sprintf("\nadding var '%s':", name))
   print(summary(model)$coefficients)
   r2 = summary(model)$r.squared; ar2 = summary(model)$adj.r.squared
   sprintf("model: R^2 = %.3f", r2)
@@ -283,7 +282,7 @@ further above that all the variables (except for "crime") are collinear.
 
 <!--# Reference: Lecture 8, slide 13 -->
 
-```{r}
+```{r, fig.height=3}
 model = lm(expend~employ, data=crimes) # result of part 2b
 state = data.frame(bad=50, crime=5000, lawyers=5000, employ=5000, pop=5000)
 predict(model, state, interval="prediction")
@@ -296,7 +295,8 @@ would be between \$0 and \$642,000.
 
 ### 2 d)
 
-```{r}
+```{r, fig.height=4, fig.width=8}
+par(mfrow=c(1,2))
 #set.seed(444) # ensuring results don't change each time its run
 x = as.matrix(crimes[,-1]) # remove states column
 x = x[,-1] # remove expenditure
@@ -334,7 +334,7 @@ sprintf("mse1 = %.3f, mse2 = %.3f", mse1.lasso, mse2.lasso)
 
 <!--# REMINDER: The output of the lasso model changes with every run, so make sure the conclusion fits with the output!!! -->
 
-<!--# TODO: ask TA about interpreting result -->
+<!--# TODO: add better interpretation... -->
 
 As we can see from the lambdas calculated by the model above, for the
 minimum error, the relevant variables are bad, crime, lawyers, and
@@ -353,7 +353,7 @@ because as we saw, they had very little effect on the $R^2$ in b).
 
 ### 3 a)
 
-```{r}
+```{r, fig.height=3.5}
 titanic = read.table("titanic.txt", header=T)
 titanic$PClass = factor(titanic$PClass)
 titanic$Sex = factor(titanic$Sex)
@@ -384,12 +384,7 @@ barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Survival by Age Group",
 model = glm(Survived~Age+Sex+PClass,data=titanic, family=binomial)
 summary(model)
 
-plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival", xlab="Age (years)",main="Survival Odds of a First Class Female vs. Age")
-
-#res$coefficients['(Intercept)', 'Pr(>|z|)']
-
-
-
+plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival", xlab="Age (years)",main="Survival Odds of a First Class Female by Age")
 ```
 
 <!--# TODO: Look at going for age vs ager when attempting to interpret odds -->
@@ -410,7 +405,6 @@ lower than that of a female, as shown by the negative coefficient.
 ### 3 b)
 
 ```{r}
-
 ageclass_model = glm(Survived~Age*PClass+Sex,data=titanic, family=binomial)
 summary(ageclass_model)
 
@@ -430,8 +424,6 @@ predict(model,female3, type="response")
 predict(model,male1, type="response")
 predict(model,male2, type="response")
 predict(model,male3, type="response")
-
-
 ```
 
 Given the results of the two models produced here, as well as the one
@@ -446,8 +438,6 @@ The estimates for the probability of survival of each of the
 combinations of factors is as shown below:
 
 <!--# TODO: larger bin size for barplot -->
-
-<!--# TODO: ask TA how to interpret intercept -->
 
 <!--# TODO: is it okay to round ages? -->
 
@@ -464,8 +454,45 @@ the difference would be that the age would be split into several groups
 (represented as the variable `Ager`.
 
 To be able to predict for the odds resulting from the model, we would
-use a threshold of 2, where if the odds were above 2, the subject would
-be predicted as survived and not survived otherwise.
+use a threshold of 1, where if the odds were above 1, the subject would
+be predicted as survived and not survived otherwise. (Because when the
+odds are $\ge 1$ , there's a $\ge 50\%$ chance of survival).
+
+### 3 d)
+
+Based on the (3x2) table in part 3a, every unique combination of classes
+in this dataset has $>5$ individuals, so a chi-squared test is
+applicable.
+
+To investigate the effect of the factors `PClass` and `Sex` separately,
+we'll perform two separate chisquare tests which each test the
+significance of a single factor.
+
+```{r}
+# build contigency table
+cont1 = as.matrix(xtabs(~PClass, data=titanic))
+cont1
+chisq.test(cont1)
+
+cont2 = as.matrix(xtabs(~Sex, data=titanic))
+cont2
+chisq.test(cont2)
+```
+
+Both chisquare tests yield p-values $<0.05$ so we reject the null
+hypotheses that Sex and PClass aren't significantly explanatory
+variables for predicting survival.
+
+### 3 e)
+
+Comparing the linear regression approach vs the chisquare approach, the
+linear regression approach has the advantage of being able to make
+predictions on a given individual's chance of survival (which chisquare
+has no ability to do), and the linear regression approach can give
+p-values for each variable.
+
+Both methods can also give insights into the significance of explanatory
+variables.
 
 ## Exercise 4: Military Coups
 
@@ -473,8 +500,6 @@ be predicted as survived and not survived otherwise.
 
 ```{r}
 coups = read.table("coups.txt", header=T)
-coups
-
 coups$pollib=factor(coups$pollib)
 
 coupsglm = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
@@ -489,41 +514,39 @@ independence to 1989.
 ### 4 b)
 
 ```{r}
+# prints just the top 3 least significant coefficients of a model:
+evalModel = function(model, name) {
+  cat(sprintf("\n%s:\n", name))
+  res = summary(coupsglm1)$coefficients
+  print(head(res[order(res[,4], decreasing=T),], n=3))
+}
 
 coupsglm1 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
-summary(coupsglm1)$coefficients
-
-
-#numelec has highest p-value so we remove it
+evalModel(coupsglm1, "coupsglm1")
+# numelec has highest p-value (0.6705) so we remove it
 
 coupsglm2 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numregim, family=poisson, data=coups)
-summary(coupsglm2)
-
-#numregim has highest p-value so we remove it
+evalModel(coupsglm2, "coupsglm2")
+# numregim has highest p-value so we remove it
 
 coupsglm3 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size, family=poisson, data=coups)
-summary(coupsglm3)
-
-#size has highest p-value so we remove it
+evalModel(coupsglm3, "coupsglm3")
+# size has highest p-value so we remove it
 
 coupsglm4 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn, family=poisson, data=coups)
-summary(coupsglm4)
-
-#popn has highest p-value so we remove it
+evalModel(coupsglm4, "coupsglm4")
+# popn has highest p-value so we remove it
 
 coupsglm5 = glm(miltcoup~oligarchy+pollib+parties+pctvote, family=poisson, data=coups)
-summary(coupsglm5)
-
-#pctvote has highest p-value so we remove it
+evalModel(coupsglm5, "coupsglm5")
+# pctvote has highest p-value so we remove it
 
 coupsglm6 = glm(miltcoup~oligarchy+pollib+parties, family=poisson, data=coups)
-summary(coupsglm6)
-
-print("numelec, numregim, size, popn, pctvote")
-
-
-
+evalModel(coupsglm6, "coupsglm6")
+#print("coupsglm6:"); summary(coupsglm6)$coefficients
 ```
+
+<!--# TODO: ask TA if we should include output here? {R, results='hide'} -->
 
 The number of explanatory variables was reduced following the step-down
 approach, and in doing so the variables were removed in the following
@@ -532,20 +555,17 @@ model with only relevant explanatory variables (significant as
 $P < 0.05$). These variables were the same as those seen as relevant in
 the previous model in 4a), namely $oligarchy$, $pollib$, and $parties$.
 
-<!--# TODO: Ask about the factor during step-down -->
-
 ### 4 c)
 
 ```{r}
+country1 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(0), parties = mean(coups$parties))
+country2 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(1), parties = mean(coups$parties))
+country3 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(2), parties = mean(coups$parties))
 
-country1 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 0, parties = mean(coups$parties))
-country2 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 1, parties = mean(coups$parties))
-country3 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 2, parties = mean(coups$parties))
-
-predict(coupsglm6,country1, type="response")
-predict(coupsglm6,country2, type="response")
-predict(coupsglm6,country3, type="response")
-
+res = ""
+sprintf("country1 prediction = %.3f", predict(coupsglm6, country1, type="response"))
+sprintf("country2 prediction = %.3f", predict(coupsglm6, country2, type="response"))
+sprintf("country3 prediction = %.3f", predict(coupsglm6, country3, type="response"))
 ```
 
 Using the model from 4b), we found that the coefficient of $pollib$ was
