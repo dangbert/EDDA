@@ -475,6 +475,8 @@ be predicted as survived and not survived otherwise.
 coups = read.table("coups.txt", header=T)
 coups
 
+coups$pollib=factor(coups$pollib)
+
 coupsglm = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
 summary(coupsglm)
 ```
@@ -489,7 +491,8 @@ independence to 1989.
 ```{r}
 
 coupsglm1 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
-summary(coupsglm1)
+summary(coupsglm1)$coefficients
+
 
 #numelec has highest p-value so we remove it
 
@@ -528,6 +531,8 @@ order: $numelec$, $numregim$, $size$ $popn$, $pctvote$. This left the
 model with only relevant explanatory variables (significant as
 $P < 0.05$). These variables were the same as those seen as relevant in
 the previous model in 4a), namely $oligarchy$, $pollib$, and $parties$.
+
+<!--# TODO: Ask about the factor during step-down -->
 
 ### 4 c)
 
