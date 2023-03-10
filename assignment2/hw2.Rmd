@@ -473,5 +473,78 @@ be predicted as survived and not survived otherwise.
 
 ```{r}
 coups = read.table("coups.txt", header=T)
-#coups
+coups
+
+coupsglm = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
+summary(coupsglm)
 ```
+
+As can be seen by the results of the Poisson model above, it is seen
+that the variables $oligarchy$, $pollib$, and $parties$ are seen as
+significant in predicting the number of successful military coups from
+independence to 1989.
+
+### 4 b)
+
+```{r}
+
+coupsglm1 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
+summary(coupsglm1)
+
+#numelec has highest p-value so we remove it
+
+coupsglm2 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numregim, family=poisson, data=coups)
+summary(coupsglm2)
+
+#numregim has highest p-value so we remove it
+
+coupsglm3 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size, family=poisson, data=coups)
+summary(coupsglm3)
+
+#size has highest p-value so we remove it
+
+coupsglm4 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn, family=poisson, data=coups)
+summary(coupsglm4)
+
+#popn has highest p-value so we remove it
+
+coupsglm5 = glm(miltcoup~oligarchy+pollib+parties+pctvote, family=poisson, data=coups)
+summary(coupsglm5)
+
+#pctvote has highest p-value so we remove it
+
+coupsglm6 = glm(miltcoup~oligarchy+pollib+parties, family=poisson, data=coups)
+summary(coupsglm6)
+
+print("numelec, numregim, size, popn, pctvote")
+
+
+
+```
+
+The number of explanatory variables was reduced following the step-down
+approach, and in doing so the variables were removed in the following
+order: $numelec$, $numregim$, $size$ $popn$, $pctvote$. This left the
+model with only relevant explanatory variables (significant as
+$P < 0.05$). These variables were the same as those seen as relevant in
+the previous model in 4a), namely $oligarchy$, $pollib$, and $parties$.
+
+### 4 c)
+
+```{r}
+
+country1 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 0, parties = mean(coups$parties))
+country2 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 1, parties = mean(coups$parties))
+country3 = data.frame(oligarchy = mean(coups$oligarchy), pollib = 2, parties = mean(coups$parties))
+
+predict(coupsglm6,country1, type="response")
+predict(coupsglm6,country2, type="response")
+predict(coupsglm6,country3, type="response")
+
+```
+
+Using the model from 4b), we found that the coefficient of $pollib$ was
+significant and negative. This entails that with an increase in the
+value of the political liberalization (i.e. with an increase in civil
+rights), there would be a decrease in the predicted number of successful
+military coups. The predictions above confirm this.
