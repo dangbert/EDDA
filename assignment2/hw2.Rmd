@@ -13,6 +13,11 @@ editor_options:
 ```{r, echo=FALSE}
 options(digits=3) # e.g. for anova and summary() outputs...
 
+# prevent code lines from being cutoff when too long:
+#   (must install "formatR" package)
+#   https://stackoverflow.com/a/66753995
+#knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 75), tidy = TRUE)
+
 # helper function to check normality throughout this assignment
 checkNorm = function(data, name, unit="") {
   xlab = name
@@ -62,10 +67,10 @@ The p-value $0.174>0.05$ for the type in the ANOVA analysis of the
 linear model, suggests there's insufficient evidence to reject the $H_0$
 (that tree type influences volume).
 
-```{r, fig.height=4.5, fig.width=4.5, echo=FALSE}
+```{r, fig.height=2.75, fig.width=5, echo=FALSE}
 oaks = dplyr::filter(trees, type == "oak")
 beeches = dplyr::filter(trees, type != "oak")
-par(mfrow = c(2, 2))
+par(mfrow = c(1, 2))
 # making plots 
 pval = checkNorm(oaks$volume, "oak")
 pval = checkNorm(beeches$volume, "beech")
@@ -197,7 +202,6 @@ crimes = read.table("expensescrime.txt", header=T)
 pairs(crimes[,-1])
 crimes$state = factor(crimes$state)
 
-
 model = lm(expend~bad+crime+lawyers+employ+pop, data=crimes)
 summary(model)$coefficients
 anova(model)
@@ -215,28 +219,24 @@ anova(model)
 ```{r, fig.height=3.5}
 n = length(crimes[,1])
 dists = cooks.distance(model)
-plot(1:n, dists, type="b")
+plot(1:n, dists, type="b", main="Cook's Distance by Dataset Index")
 abline(1, 0, col = 'red') # plot y=1 for reference
 
 # these are the indices into crimes that are cook's points
-dists[dists > 1]
-# TODO: print state names
-#cooked = crimes[dists[dists > 1],]
-#cooked
+print("Influence points:"); crimes[dists > 1,]
 
 # investigating collinearity
 cor(crimes[,-1])
+# using 0.8 as a threshold to help with visiblility:
 res = cor(crimes[,-1])
-# using 0.8 as a threshold to help with visiblility
-res[res >= 0.8] = T; res[res <= 0.8] = F; 
-res
+res[res >= 0.8] = T; res[res <= 0.8] = F; res
 ```
 
 Based on the correlation coefficients, it appears that all the
-explanatory variables are correlated, except for crime which has no
-correlation with any of the other variables (its highest correlation
-coefficient is 0.375). The other variables all have a correlation
-coefficient of at least 0.832 between each other.
+explanatory variables are correlated with each other, except for crime
+which has no correlation with any of the other variables (its highest
+correlation coefficient is 0.375). The other variables all have a
+correlation coefficient of at least 0.832 between each other.
 
 <!--# TODO ask TA about what a fair threshold is? -->
 
@@ -244,38 +244,39 @@ coefficient of at least 0.832 between each other.
 
 ```{r}
 evalModel = function(model, name) {
-  cat(sprintf("\nadding var '%s':", name))
-  print(summary(model)$coefficients)
   r2 = summary(model)$r.squared; ar2 = summary(model)$adj.r.squared
-  sprintf("model: R^2 = %.3f", r2)
+  pVal = summary(model)$coefficients[name, "Pr(>|t|)"]
+  cat(sprintf("adding var '%s'\t\tPr(>|t|) =  %.3f, model R^2 = %.3f\n", name, pVal, r2))
 }
 
-evalModel(lm(expend~bad, data=crimes), name="bad")
-evalModel(lm(expend~crime, data=crimes), name="crime")
-evalModel(lm(expend~lawyers, data=crimes), name="lawyers")
-evalModel(lm(expend~employ, data=crimes), name="employ")
-evalModel(lm(expend~pop, data=crimes), name="pop")
-
-# employ has highest adj. R^2 (0.955) and is significant
-print("****round2****")
-evalModel(lm(expend~employ+bad, data=crimes), name="bad")
-evalModel(lm(expend~employ+crime, data=crimes), name="crime")
-evalModel(lm(expend~employ+lawyers, data=crimes), name="lawyers")
-evalModel(lm(expend~employ+pop, data=crimes), name="pop")
+doStepUp = function() {
+  cat("\n****round1****\n")
+  evalModel(lm(expend~bad, data=crimes), name="bad")
+  evalModel(lm(expend~crime, data=crimes), name="crime")
+  evalModel(lm(expend~lawyers, data=crimes), name="lawyers")
+  evalModel(lm(expend~employ, data=crimes), name="employ")
+  evalModel(lm(expend~pop, data=crimes), name="pop")
+  
+  # employ has highest adj. R^2 (0.954) and is significant
+  cat("\n****round2****\n")
+  evalModel(lm(expend~employ+bad, data=crimes), name="bad")
+  evalModel(lm(expend~employ+crime, data=crimes), name="crime")
+  evalModel(lm(expend~employ+lawyers, data=crimes), name="lawyers")
+  evalModel(lm(expend~employ+pop, data=crimes), name="pop")
+}
+doStepUp()
 ```
 
-<!--# TODO: crispy code output -->
-
 In the 1st round of the "step up" method we found "employ" to lead to
-the largest $R^2$ model, while still being statistically significant.
+the model with the largest $R^2$, while still being statistically
+significant. In the 2nd round, "lawyers" was found to lead to the
+largest increase in $R^2$ while still being statistically significant,
+however the increase in $R^2$ was only $0.963-0.954=0.009$, which is
+quite low, so we don't deem it worth adding to the model. (And so our
+final model is `lm(expend~employ, data=crimes)`).
 
-In the 2nd round of the "step up" method, "lawyers" was found to lead to
-the largest increase in $R^2$ while still being statistically
-significant, however the increase in $R^2$ was only $0.963-0.954=0.009$,
-which is quite low, so we don't deem it worth adding to the model.
-
-The result of the "step up" method suggesting the model should only have
-one explanatory variable ("employ") is not surprising as we showed
+The result of the "step up" method suggesting that the model should only
+have one explanatory variable ("employ") is not surprising as we showed
 further above that all the variables (except for "crime") are collinear.
 
 ### 2 c)
@@ -295,13 +296,16 @@ would be between \$0 and \$642,000.
 
 ### 2 d)
 
+```{r, results='hide', message=F}
+library(glmnet)
+```
+
 ```{r, fig.height=4, fig.width=8}
 par(mfrow=c(1,2))
 #set.seed(444) # ensuring results don't change each time its run
 x = as.matrix(crimes[,-1]) # remove states column
 x = x[,-1] # remove expenditure
 y = crimes[,2]
-#x
 
 train = sample(1:nrow(x),0.67*nrow(x))
 x.train = x[train,]; y.train = y[train]
@@ -312,7 +316,6 @@ y.predict.lm = predict(lm.model,newdata=crimes[-train,])
 mse.lm = mean((y.test-y.predict.lm)^2)
 sprintf("linear model mse = %.3f", mse.lm)
 
-library(glmnet) 
 lasso.model = glmnet(x.train,y.train,alpha=1)
 lasso.cv = cv.glmnet(x.train,y.train,alpha=1,type.measure="mse",nfolds=5)
 
@@ -353,34 +356,29 @@ because as we saw, they had very little effect on the $R^2$ in b).
 
 ### 3 a)
 
-```{r, fig.height=3.5}
+```{r, fig.height=3.5, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
 titanic = read.table("titanic.txt", header=T)
 titanic$PClass = factor(titanic$PClass)
 titanic$Sex = factor(titanic$Sex)
 #titanic$Survived = factor(titanic$Survived)
 
 library(plyr)
-# round age to nearest 10 years
-#   https://stackoverflow.com/a/6466894
+# round age to nearest 10 years (https://stackoverflow.com/a/6466894)
 titanic$Ager = round_any(titanic$Age, 20)
 titanic$Ager = factor(titanic$Ager)
 titanic$Age2 = titanic$Age^2
 
 print("total number of individuals for each combination of class and gender:")
-tot = xtabs(~PClass+Sex, data=titanic)
-tot
+tot = xtabs(~PClass+Sex, data=titanic); tot
 
-print("Surival rate by class and gender combinations:")
-totc = xtabs(Survived~PClass+Sex, data=titanic)
-round(totc/tot, 2)
+print("Survival rate by class and gender combinations:")
+totc = xtabs(Survived~PClass+Sex, data=titanic); round(totc/tot, 2)
 
 #plot(titanic$Age, y=titanic$Survived, xlim=c(0, 100))
 totage = xtabs(~Age, data=titanic)
 barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Survival by Age Group", xlab="Age Group", ylab="Survival Ratio")
 
 # build logistic regression model
-#roundUp = function(x) 10^ceiling(log10(x))
-
 model = glm(Survived~Age+Sex+PClass,data=titanic, family=binomial)
 summary(model)
 
@@ -388,6 +386,8 @@ plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival",
 ```
 
 <!--# TODO: Look at going for age vs ager when attempting to interpret odds -->
+
+<!--# TODO: larger binsize for boxplot... -->
 
 In the model above, the intercept can be interpreted as a female who
 traveled in 1st class. We can see that other classes (namely 2nd and
@@ -437,8 +437,6 @@ significant ($P > 0.05$ for both 2nd class and 3rd class).
 The estimates for the probability of survival of each of the
 combinations of factors is as shown below:
 
-<!--# TODO: larger bin size for barplot -->
-
 <!--# TODO: is it okay to round ages? -->
 
 <!--# TODO: clean up after me pls daddy Dan -->
@@ -470,12 +468,10 @@ significance of a single factor.
 
 ```{r}
 # build contigency table
-cont1 = as.matrix(xtabs(~PClass, data=titanic))
-cont1
+cont1 = as.matrix(xtabs(~PClass, data=titanic)); cont1
 chisq.test(cont1)
 
-cont2 = as.matrix(xtabs(~Sex, data=titanic))
-cont2
+cont2 = as.matrix(xtabs(~Sex, data=titanic)); cont2
 chisq.test(cont2)
 ```
 
@@ -513,11 +509,11 @@ independence to 1989.
 
 ### 4 b)
 
-```{r}
+```{r,tidy=TRUE, tidy.opts=list(width.cutoff=60)}
 # prints just the top 3 least significant coefficients of a model:
 evalModel = function(model, name) {
   cat(sprintf("\n%s:\n", name))
-  res = summary(coupsglm1)$coefficients
+  res = summary(model)$coefficients
   print(head(res[order(res[,4], decreasing=T),], n=3))
 }
 
@@ -546,7 +542,7 @@ evalModel(coupsglm6, "coupsglm6")
 #print("coupsglm6:"); summary(coupsglm6)$coefficients
 ```
 
-<!--# TODO: ask TA if we should include output here? {R, results='hide'} -->
+<!--# TODO: shouldn't we remove 'pollib1' actually? instead of pctvote...??? -->
 
 The number of explanatory variables was reduced following the step-down
 approach, and in doing so the variables were removed in the following
@@ -558,14 +554,19 @@ the previous model in 4a), namely $oligarchy$, $pollib$, and $parties$.
 ### 4 c)
 
 ```{r}
-country1 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(0), parties = mean(coups$parties))
-country2 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(1), parties = mean(coups$parties))
-country3 = data.frame(oligarchy = mean(coups$oligarchy), pollib = factor(2), parties = mean(coups$parties))
+country1 = data.frame(oligarchy = mean(coups$oligarchy),
+  pollib = factor(0), parties = mean(coups$parties))
+country2 = data.frame(oligarchy = mean(coups$oligarchy),
+  pollib = factor(1), parties = mean(coups$parties))
+country3 = data.frame(oligarchy = mean(coups$oligarchy),
+  pollib = factor(2), parties = mean(coups$parties))
 
-res = ""
-sprintf("country1 prediction = %.3f", predict(coupsglm6, country1, type="response"))
-sprintf("country2 prediction = %.3f", predict(coupsglm6, country2, type="response"))
-sprintf("country3 prediction = %.3f", predict(coupsglm6, country3, type="response"))
+printResults = function() {
+  print(sprintf("country1 prediction = %.3f", predict(coupsglm6, country1, type="response")))
+  print(sprintf("country2 prediction = %.3f", predict(coupsglm6, country2, type="response")))
+  print(sprintf("country3 prediction = %.3f", predict(coupsglm6, country3, type="response")))
+}
+printResults()
 ```
 
 Using the model from 4b), we found that the coefficient of $pollib$ was
