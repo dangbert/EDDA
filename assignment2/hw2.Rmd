@@ -196,8 +196,6 @@ greater than that of the model in part c), so this model appears to be
 superior to using just the provided height and diameter variables in the
 model.
 
-<!--# TODO: we could also argue that the cylinder field summarizes / reduces the dimensionality from R^2 -> R, so it's arguably a simpler model? -->
-
 ## Exercise 2: Expenditure on criminal activities
 
 ### 2 a)
@@ -206,31 +204,20 @@ model.
 crimes = read.table("expensescrime.txt", header=T)
 pairs(crimes[,-1])
 crimes$state = factor(crimes$state)
-
-model = lm(expend~bad+crime+lawyers+employ+pop, data=crimes)
-summary(model)$coefficients
-anova(model)
-
-print('model 2:')
 model = lm(expend~crime+bad+lawyers+employ+pop, data=crimes)
-summary(model)$coefficients
-anova(model)
-
-# sorting by population
-#crimes[order(crimes$pop, decreasing=TRUE),]
-#crimes
+summary(model)$coefficients; anova(model)
 ```
 
-```{r, fig.height=3.5}
+```{r, fig.height=2.7, fig.width=5}
 n = length(crimes[,1])
 dists = cooks.distance(model)
 plot(1:n, dists, type="b", main="Cook's Distance by Dataset Index")
 abline(1, 0, col = 'red') # plot y=1 for reference
 
-# these are the indices into crimes that are cook's points
+# cook's points:
 print("Influence points:"); crimes[dists > 1,]
 
-# investigating collinearity
+# investigating collinearity:
 cor(crimes[,-1])
 # using 0.8 as a threshold to help with visiblility:
 res = cor(crimes[,-1])
@@ -249,11 +236,11 @@ correlation coefficient of at least 0.832 between each other.
 evalModel = function(model, name) {
   r2 = summary(model)$r.squared; ar2 = summary(model)$adj.r.squared
   pVal = summary(model)$coefficients[name, "Pr(>|t|)"]
-  cat(sprintf("adding var '%s'\t\tPr(>|t|) =  %.3f, model R^2 = %.3f\n", name, pVal, r2))
+  cat(sprintf("trying var '%s'\t\tPr(>|t|) =  %.3f, model R^2 = %.3f\n", name, pVal, r2))
 }
 
 doStepUp = function() {
-  cat("\n****round1****\n")
+  cat("\n****round1 (building model with 1 var)****\n")
   evalModel(lm(expend~bad, data=crimes), name="bad")
   evalModel(lm(expend~crime, data=crimes), name="crime")
   evalModel(lm(expend~lawyers, data=crimes), name="lawyers")
@@ -261,41 +248,47 @@ doStepUp = function() {
   evalModel(lm(expend~pop, data=crimes), name="pop")
   
   # employ has highest adj. R^2 (0.954) and is significant
-  cat("\n****round2****\n")
+  cat("\n****round2 (building on model with employ)****\n")
   evalModel(lm(expend~employ+bad, data=crimes), name="bad")
   evalModel(lm(expend~employ+crime, data=crimes), name="crime")
   evalModel(lm(expend~employ+lawyers, data=crimes), name="lawyers")
   evalModel(lm(expend~employ+pop, data=crimes), name="pop")
+  
+  cat("\n****round3 (building on model with employ+laywers)****\n")
+  evalModel(lm(expend~employ+lawyers+bad, data=crimes), name="bad")
+  evalModel(lm(expend~employ+lawyers+crime, data=crimes), name="crime")
+  evalModel(lm(expend~employ+lawyers+pop, data=crimes), name="pop")
 }
 doStepUp()
 ```
 
 In the 1st round of the "step up" method we found "employ" to lead to
 the model with the largest $R^2$, while still being statistically
-significant. In the 2nd round, "lawyers" was found to lead to the
-largest increase in $R^2$ while still being statistically significant,
-however the increase in $R^2$ was only $0.963-0.954=0.009$, which is
-quite low, so we don't deem it worth adding to the model. (And so our
-final model is `lm(expend~employ, data=crimes)`).
-
-The result of the "step up" method suggesting that the model should only
-have one explanatory variable ("employ") is not surprising as we showed
-further above that all the variables (except for "crime") are collinear.
+significant. In the 2nd round (building up from the model with "employ"), "lawyers" was found to lead to the
+largest increase in $R^2$ while still being statistically significant (p < 0.05), so we add it to the model.  The 3rd round of the "step up" method showed that no further variables could be added while being statistically significant.  So our final model is `lm(expend~employ+lawyers, data=crimes)`.
 
 ### 2 c)
-
 <!--# Reference: Lecture 8, slide 13 -->
+Taking the resulting model from part 2b, we found the normality assumptions weren't met, so we adjusted the model by taking the square root of `expend`.  The residuals then indicated normality assumptions were met, however the p-value for `lawyers` was no longer significant.
 
-```{r, fig.height=3}
-model = lm(expend~employ, data=crimes) # result of part 2b
+So we tried the best model from round 1 of step up which was `lm(expend~employ, data=crimes)` (noting that this model was comporable as adding `laywers` had only increased the $R^2$ by $0.963-0.954=0.009$).  Finally, after checking the normality assumptions of this model, we again saw they weren't met, and so settled on the final model of `lm(sqrt(expend)~employ, data=crimes)` for which the assumptions are now met (the qqplot of residuals below is approximately linear now).
+
+```{r, fig.height=2.5, fig.width=6}
+# this model meets normality assumptions, but p-value for lawyers is 0.44 > 0.05
+#model = lm(sqrt(expend)~employ+lawyers, data=crimes)
+
+model = lm(sqrt(expend)~employ, data=crimes)
+summary(model)$coefficients
+
+par(mfrow = c(1, 3)); pval = checkAnovaNorm(model, "model")
+
 state = data.frame(bad=50, crime=5000, lawyers=5000, employ=5000, pop=5000)
-predict(model, state, interval="prediction")
+pred = predict(model, state, interval="prediction")^2
+
+sprintf("predicted expenditure CI ="); pred
 ```
 
-The predicted interval $[-407, 642]$ can be improved by adjusting it to
-$[0, 642]$ as we know the expenditure must be a positive number. So
-we're 95% confident that the expenditure by this hypothetical state
-would be between \$0 and \$642,000.
+The predicted interval $[80.3, 526]$ can't be further improved in this case, as both numbers are $>0$ and the process of finding a solid model already improved the accuracy of this CI.  Arguably, you could consider removing some influence points to further "improve" this CI (but this is risky).
 
 ### 2 d)
 
@@ -303,9 +296,9 @@ would be between \$0 and \$642,000.
 library(glmnet)
 ```
 
-```{r, fig.height=4, fig.width=8}
+```{r, fig.height=2.5, fig.width=5.5}
 par(mfrow=c(1,2))
-#set.seed(444) # ensuring results don't change each time its run
+set.seed(42) # ensuring results don't change each time its run
 x = as.matrix(crimes[,-1]) # remove states column
 x = x[,-1] # remove expenditure
 y = crimes[,2]
@@ -322,13 +315,14 @@ sprintf("linear model mse = %.3f", mse.lm)
 lasso.model = glmnet(x.train,y.train,alpha=1)
 lasso.cv = cv.glmnet(x.train,y.train,alpha=1,type.measure="mse",nfolds=5)
 
-plot(lasso.model,label=T,xvar="lambda")
-plot(lasso.cv) 
+plot(lasso.model,label=T,xvar="lambda"); plot(lasso.cv) 
 
 lambda.min = lasso.cv$lambda.min; lambda.1se=lasso.cv$lambda.1se; 
 sprintf("lambda.min = %.3f, lambda.1se = %.3f", lambda.min, lambda.1se)
 
-coef(lasso.model,s=lasso.cv$lambda.min) 
+# lasso min (minimizing R^2)
+coef(lasso.model,s=lasso.cv$lambda.min)
+# 1 SE (minimizing number of vars, while remaining within 1 std. err.)
 coef(lasso.model,s=lasso.cv$lambda.1se) 
 
 lasso.pred1 = predict(lasso.model,s=lambda.min,newx=x.test) 
@@ -340,20 +334,14 @@ sprintf("mse1 = %.3f, mse2 = %.3f", mse1.lasso, mse2.lasso)
 
 <!--# REMINDER: The output of the lasso model changes with every run, so make sure the conclusion fits with the output!!! -->
 
-<!--# TODO: add better interpretation... -->
-
 As we can see from the lambdas calculated by the model above, for the
-minimum error, the relevant variables are bad, crime, lawyers, and
-employ. To obtain a reduced model that is within one standard error of
-the minimum, we can take into account only bad, lawyers, and employ. In
-general the model is very similar to the one in b). While in b), the
-variables that were collinear could have been added to the model to
-improve the \$R\^2\$, we chose not to do so because the improvement was
-marginal. The lasso model does something similar, in that it selects one
-of the aforementioned variables as the primary factor (which has a large
-coefficient), and the other (believed to be collinear) variables that
-are shown as relevant by the lasso model have very small coefficients,
-because as we saw, they had very little effect on the $R^2$ in b).
+minimum error, the relevant variables are `laywers`, `employ`, and `crime`.  To obtain a reduced model that is within one standard error of the minimum, we can take into account only these relevant variables.
+
+Considering the scale differences of the relevant variables, the coefficient of `pop` is not only the largest, but it also has the largest contribution for predictions (as the `pop` variable will always be larger than `employ` and `lawyer` for any given state by a considerable margin).
+
+As a disclaimer, the results from the lasso method will always vary with random chance, however this intrerpretation holds for our resulting model.
+
+The coefficients of the other two relevant variables (`lawyers` and `pop`) are much smaller due to their collinearity with `employ`.
 
 ## Exercise 3: Titanic
 
