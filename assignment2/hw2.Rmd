@@ -357,7 +357,7 @@ library(plyr)
 # round age to nearest 10 years (https://stackoverflow.com/a/6466894)
 titanic$Ager = round_any(titanic$Age, 20)
 titanic$Ager = factor(titanic$Ager)
-titanic$Age2 = titanic$Age^2
+#titanic$Age2 = titanic$Age^2
 
 print("total number of individuals for each combination of class and gender:")
 tot = xtabs(~PClass+Sex, data=titanic); tot
@@ -371,7 +371,8 @@ barplot(xtabs(Survived~Age,data=titanic)/totage, main="% Survival by Age Group",
 
 # build logistic regression model
 model = glm(Survived~Age+Sex+PClass,data=titanic, family=binomial)
-summary(model)
+drop1(model, test = "Chisq")
+summary(model)$coefficients
 
 plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival", xlab="Age (years)",main="Survival Odds of a First Class Female by Age")
 ```
@@ -380,8 +381,7 @@ plot(titanic$Age,exp(3.759662 + titanic$Age*-0.039177), ylab="Odds of Survival",
 
 <!--# TODO: larger binsize for boxplot... -->
 
-In the model above, the intercept can be interpreted as a female who
-traveled in 1st class. We can see that other classes (namely 2nd and
+In the model summary above, the intercept can be interpreted as a female who traveled in 1st class. We can see that other classes (namely 2nd and
 3rd) lower the odds of survival by the negative coefficients, where 3rd
 class has a larger impact than 2nd. Similarly, an increase in age has a
 negative impact on survival odds, however the impact is low because of
@@ -395,12 +395,12 @@ lower than that of a female, as shown by the negative coefficient.
 
 ### 3 b)
 
-```{r}
+```{r, fig.height=2.75, fig.width=5}
 ageclass_model = glm(Survived~Age*PClass+Sex,data=titanic, family=binomial)
-summary(ageclass_model)
+summary(ageclass_model)$coefficients
 
 agesex_model = glm(Survived~Age*Sex+PClass,data=titanic, family=binomial)
-summary(agesex_model)
+summary(agesex_model)$coefficients
 
 male1 = data.frame(Age=55, Sex = "male", PClass = "1st")
 male2 = data.frame(Age=55, Sex = "male", PClass = "2nd")
@@ -490,7 +490,7 @@ coups = read.table("coups.txt", header=T)
 coups$pollib=factor(coups$pollib)
 
 coupsglm = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
-summary(coupsglm)
+summary(coupsglm)$coefficients
 ```
 
 As can be seen by the results of the Poisson model above, it is seen
@@ -501,44 +501,48 @@ independence to 1989.
 ### 4 b)
 
 ```{r,tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+VERBOSE = F
 # prints just the top 3 least significant coefficients of a model:
-evalModel = function(model, name) {
-  cat(sprintf("\n%s:\n", name))
-  res = summary(model)$coefficients
-  print(head(res[order(res[,4], decreasing=T),], n=3))
+evalModel = function(model, name, verbose=VERBOSE) {
+  if (verbose) {
+    cat(sprintf("\n%s:\n", name))
+    res = drop1(model, test="Chisq")
+    #res = summary(model)$coefficients
+    print(head(res[order(res[,5], decreasing=T),], n=3))
+  }
 }
 
 coupsglm1 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numelec+numregim, family=poisson, data=coups)
 evalModel(coupsglm1, "coupsglm1")
-# numelec has highest p-value (0.6705) so we remove it
+# numelec has highest p-value (0.67) so we remove it
 
 coupsglm2 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size+numregim, family=poisson, data=coups)
 evalModel(coupsglm2, "coupsglm2")
-# numregim has highest p-value so we remove it
+# numregim has highest p-value (0.42) so we remove it
 
 coupsglm3 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn+size, family=poisson, data=coups)
 evalModel(coupsglm3, "coupsglm3")
-# size has highest p-value so we remove it
+# size has highest p-value (0.33) so we remove it
 
 coupsglm4 = glm(miltcoup~oligarchy+pollib+parties+pctvote+popn, family=poisson, data=coups)
 evalModel(coupsglm4, "coupsglm4")
-# popn has highest p-value so we remove it
+# popn has highest p-value (0.31) so we remove it
 
 coupsglm5 = glm(miltcoup~oligarchy+pollib+parties+pctvote, family=poisson, data=coups)
 evalModel(coupsglm5, "coupsglm5")
-# pctvote has highest p-value so we remove it
+# pctvote has highest p-value (0.19) so we remove it
 
 coupsglm6 = glm(miltcoup~oligarchy+pollib+parties, family=poisson, data=coups)
 evalModel(coupsglm6, "coupsglm6")
-#print("coupsglm6:"); summary(coupsglm6)$coefficients
+print("coupsglm6 (final model):")
+drop1(coupsglm6, test="Chisq")
 ```
 
-<!--# TODO: shouldn't we remove 'pollib1' actually? instead of pctvote...??? -->
 
 The number of explanatory variables was reduced following the step-down
 approach, and in doing so the variables were removed in the following
 order: $numelec$, $numregim$, $size$ $popn$, $pctvote$. This left the
-model with only relevant explanatory variables (significant as
+model (`coupsglm6`) with only relevant explanatory variables (significant as
 $P < 0.05$). These variables were the same as those seen as relevant in
 the previous model in 4a), namely $oligarchy$, $pollib$, and $parties$.
 
