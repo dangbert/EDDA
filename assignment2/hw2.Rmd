@@ -347,7 +347,7 @@ The coefficients of the other two relevant variables (`lawyers` and `pop`) are m
 
 ### 3 a)
 
-```{r, fig.height=3.5, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+```{r, fig.height=2.5, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
 titanic = read.table("titanic.txt", header=T)
 titanic$PClass = factor(titanic$PClass)
 titanic$Sex = factor(titanic$Sex)
@@ -397,40 +397,30 @@ lower than that of a female, as shown by the negative coefficient.
 
 ```{r, fig.height=2.75, fig.width=5}
 ageclass_model = glm(Survived~Age*PClass+Sex,data=titanic, family=binomial)
-summary(ageclass_model)$coefficients
+drop1(ageclass_model, test="Chisq")
 
 agesex_model = glm(Survived~Age*Sex+PClass,data=titanic, family=binomial)
-summary(agesex_model)$coefficients
+drop1(agesex_model, test="Chisq")
 
-male1 = data.frame(Age=55, Sex = "male", PClass = "1st")
-male2 = data.frame(Age=55, Sex = "male", PClass = "2nd")
-male3 = data.frame(Age=55, Sex = "male", PClass = "3rd")
-female1 = data.frame(Age=55, Sex = "female", PClass = "1st")
-female2 = data.frame(Age=55, Sex = "female", PClass = "2nd")
-female3 = data.frame(Age=55, Sex = "female", PClass = "3rd")
-
-predict(model,female1, type="response")
-predict(model,female2, type="response")
-predict(model,female3, type="response")
-predict(model,male1, type="response")
-predict(model,male2, type="response")
-predict(model,male3, type="response")
+predict(model, data.frame(Age=55, Sex = "female", PClass = "1st"), type="response")[[1]]
+predict(model, data.frame(Age=55, Sex = "female", PClass = "2nd"), type="response")[[1]]
+predict(model, data.frame(Age=55, Sex = "female", PClass = "3rd"), type="response")[[1]]
+predict(model, data.frame(Age=55, Sex = "male", PClass = "1st"), type="response")[[1]]
+predict(model, data.frame(Age=55, Sex = "male", PClass = "2nd"), type="response")[[1]]
+predict(model, data.frame(Age=55, Sex = "male", PClass = "3rd"), type="response")[[1]]
 ```
 
 Given the results of the two models produced here, as well as the one
 from 3a), we will select the model that considers the interaction
-between sex and age, given that the model found that the interaction was
-significant (the model in 3a) found that sex and age by themselves were
+between sex and age (`agesex_model`) as this model found that the interaction was
+significant (and the model in 3a found that sex and age by themselves were
 also significant). Furthermore, the model that considered the
 interaction between age and class found that the interaction was not
-significant ($P > 0.05$ for both 2nd class and 3rd class).
+significant.
 
 The estimates for the probability of survival of each of the
-combinations of factors is as shown below:
+combinations of factors is show above.
 
-<!--# TODO: is it okay to round ages? -->
-
-<!--# TODO: clean up after me pls daddy Dan -->
 
 ### 3 c)
 
@@ -438,12 +428,12 @@ We propose to do k-fold cross-validation, using 10% of the data in each
 fold, and calculating the average prediction accuracy per combination of
 factor levels. We would use a slightly modified version of the model
 from 3b), namely
-`glm(Survived~Ager*Sex+PClass,data=titanic, family=binomial)` , where
+`glm(Survived~Ager*Sex+PClass,data=titanic, family=binomial)`, where
 the difference would be that the age would be split into several groups
-(represented as the variable `Ager`.
+(represented as the variable `Ager`, which was calculated in part 3a by rounding ages to the nearest 10 years).
 
 To be able to predict for the odds resulting from the model, we would
-use a threshold of 1, where if the odds were above 1, the subject would
+use a threshold of 1, where if the odds were above 1, the individual would
 be predicted as survived and not survived otherwise. (Because when the
 odds are $\ge 1$ , there's a $\ge 50\%$ chance of survival).
 
@@ -454,32 +444,29 @@ in this dataset has $>5$ individuals, so a chi-squared test is
 applicable.
 
 To investigate the effect of the factors `PClass` and `Sex` separately,
-we'll perform two separate chisquare tests which each test the
-significance of a single factor.
+we'll perform two separate tests (Chi-squared and Fisher's respectively on the variables) which test the significance of each factor.
 
 ```{r}
-# build contigency table
-cont1 = as.matrix(xtabs(~PClass, data=titanic)); cont1
+# build contingency table
+cont1 = as.matrix(xtabs(~PClass+Survived, data=titanic)); cont1
 chisq.test(cont1)
 
-cont2 = as.matrix(xtabs(~Sex, data=titanic)); cont2
-chisq.test(cont2)
+# this is 2x2 so fisher's test is more appropriate
+cont2 = as.matrix(xtabs(~Sex+Survived, data=titanic)); cont2
+fisher.test(cont2)
 ```
 
-Both chisquare tests yield p-values $<0.05$ so we reject the null
+Both the Chi-squared test and Fisher's exact test yield p-values $<0.05$ so we reject the null
 hypotheses that Sex and PClass aren't significantly explanatory
 variables for predicting survival.
 
 ### 3 e)
 
-Comparing the linear regression approach vs the chisquare approach, the
-linear regression approach has the advantage of being able to make
-predictions on a given individual's chance of survival (which chisquare
-has no ability to do), and the linear regression approach can give
-p-values for each variable.
+Comparing the logistic regression approach (part 3c) vs the Chi-squared approach (part 3d), the logistic regression approach has the advantage of being able to make predictions on a given individual's chance of survival, but the disadvantage of not testing the validity of the underlying assumptions of the logistic regression model.
 
-Both methods can also give insights into the significance of explanatory
-variables.
+The Chi-squared approach on the other hand has the disadvantage of requiring you to test each factor individually (as including multiple factors in the contigency table, doesn't allow you to identify which were impactful in the final significance result).  Additionally, it can't test the significance of numerical explanatory variables (which is an advantage of the glm approach).
+
+Both methods can also give insights into the significance of categorical explanatory variables by providing p-values for them (e.g. by calling `drop1(agesex_model, test="Chisq")`)
 
 ## Exercise 4: Military Coups
 
