@@ -1,0 +1,29 @@
+```{r}
+bodyfat = read.table("bodyfat.txt",header=T)
+
+pairs(bodyfat)
+bodyfat
+
+bodyfatlm = lm(Fat~Triceps,data=bodyfat)
+
+summary(bodyfatlm)
+
+print("fitted:")
+
+# fit to dataset (bodyfat)
+fitted(bodyfatlm)
+
+newxdata = tail(bodyfat, n=1)
+# predict on "new" data:
+res = predict(bodyfatlm, newxdata)
+print(sprintf('prediction: %.4f', res))
+
+
+
+```
+
+...
+
+```{r}
+
+```

@@ -1,0 +1,90 @@
+---
+title: "Lecture 10"
+output: pdf_document
+date: "2023-03-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Logistic Regression
+
+```{r, fig.height=3}
+esoph = read.table("esoph.txt",h=T)
+esoph
+
+print("total number of individuals for each combination of levels of alcohol and tobacco use:")
+tot = xtabs(~alc+tob,data=esoph)
+# 
+tot
+
+print("% of individuals with cancer for every combination of levels of alcohol and tobacco")
+tot.c = xtabs(cancer~alc+tob,data=esoph)
+round(tot.c/tot, 2)
+
+# graphical analysis
+totage=xtabs(~age,data=esoph)
+barplot(xtabs(cancer~age,data=esoph)/totage, main="% Cancer by Age group", xlab="Age Group", ylab="Cancer Ratio")
+
+# we create a variable age^2 (as an experiment) because the percentage with cancer by age group doesn't appear to be linear...
+esoph$age2=esoph$age^2
+model = glm(cancer~age+age2+alc+tob,data=esoph,family=binomial)
+
+# display the "MLE" estimates of the model coefficinets
+#  and individual tests that these coefficients are 0...
+summary(model)
+
+esoph$age
+```
+
+Seeing the age2 has a negative coefficient, is a weird result, which suggests maybe we shouldn't have added it to the model (or IMO maybe we should include age2 but not age).
+
+We can interpret the results by saying that:
+
+> Increasing tobacco use by 1, increases the linear predictor by 0.0256, and the odds by a factor of $e^{0.0256}$.
+>
+> For age the dependence is parabolic: from 25 to 30 years the odds increase by $e^{0.17(30 − 25) − 0.00096(302 − 252)} = 1.7869$
+
+The safest way to test the result is to use:
+
+> Note he didn't explain why Chi-squared should be used here, but that's the case.
+
+```{r}
+# create the "deviance tables"
+# (exame proressive ofr of the model as each covariate/factor
+#   is added to the model)
+
+print("anova result:")
+anova(model, test="Chisq")
+
+print("drop1 result:")
+drop1(model, test="Chisq")
+```
+
+Diagnostics for GLM's aren't as straightforward as for linear models (and are a bit out of scope for this course).
+
+```{r}
+# converting variables tob, alc, and age from numeric -> factors
+esoph$age=factor(esoph$age)
+esoph$alc=factor(esoph$alc)
+esoph$tob=factor(esoph$tob)
+
+glm2 = glm(cancer~age+alc+tob,data=esoph,family=binomial)
+summary(glm2)
+```
+
+the estimated odds for the group (age70, alc20, tob35) is $3.36 + 0 + 0.87} = e^{−1.68}$
+
+## Posission Regression
+
+```{r}
+gala = read.table("gala.txt", header=T)
+pairs(gala)
+
+
+model = glm(Species~Area+Elevation+Nearest+Scruz+Adjacent, family="poisson", data=gala)
+summary(model)
+
+# we can now use anova(), drop1() summary(), coef, fitted, predicte, confint, etc as before
+```

@@ -1,0 +1,77 @@
+```{r}
+# based on lecture 4, from slide 10...
+melon = read.table("melon.txt",header=TRUE)
+
+boxplot(melon)
+stripchart(melon,vertical=TRUE)
+
+melonframe = data.frame(yield=as.vector(as.matrix(melon)), variety=factor(rep(1:4,each=6)))
+
+# ensuring factor is properly defined:
+is.factor(melonframe$variety)
+is.numeric(melonframe$variety)
+
+melonaov=lm(yield~variety,data=melonframe)
+print("menlonaov:")
+summary(melonaov)
+print("anova results:")
+anova(melonaov)
+
+```
+
+```{r}
+
+```
+
+------------------------------------------------------------------------
+
+## Two-Way ANOVA
+
+Based on Lecture 5, slide 11
+
+```{r}
+#library(dplyr)
+pvc=read.table(file="pvc.txt",header=TRUE)
+#pvc
+ 
+attach(pvc) # I think this adds vars to namespace
+boxplot(psize~operator)
+boxplot(psize~resin)
+
+# make interaction plots
+interaction.plot(operator,resin,psize)
+interaction.plot(resin,operator,psize)
+
+# run test
+pvc$operator = as.factor(pvc$operator)
+pvc$resin = as.factor(pvc$resin)
+pvcaov = lm(psize~operator*resin)
+anova(pvcaov)
+```
+
+Now we run ANOVA again without interaction in the model (because it's p-value was \> 0.05).
+
+```{r}
+# (see slide 16)
+pvc$operator=as.factor(pvc$operator)
+pvc$resin=as.factor(pvc$resin)
+pvcaov2 = lm(psize~operator+resin,data=pvc)
+anova(pvcaov2)
+
+qqnorm(residuals(pvcaov2))
+plot(fitted(pvcaov2),residuals(pvcaov2))
+```
+
+(see notes on slide 17. The spread in the dotplot is a concern about this model)...
+
+## Split-plot Design
+
+```{r}
+wheat = read.table(file="wheat.txt",header=TRUE)
+wheat
+
+# tell R that certain columns are factor and not just numbers
+wheat$spray = factor(wheat$spray);
+wheat$variety = factor(wheat$variety);
+wheatlm=lm(yield~spray*variety+farm+farm:spray,data=wheat)
+```

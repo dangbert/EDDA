@@ -1,0 +1,73 @@
+---
+title: "Lecture 11"
+output: pdf_document
+date: "2023-03-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Nonlinear regression
+
+```{r, fig.height=4}
+# provides Run, conc, density
+attach(DNase)
+n = length(density)
+plot(conc, density, xlab="Concentration", ylab="Optical Density")
+
+# formula we want to fit to data
+form = as.formula(density~theta1 / (1+exp((theta2-log(conc))/theta3)))
+
+# now do nonlinear least squares
+#   (we provide a starting point for the Gauss-Newton method)
+nmodel = nls(form, DNase, start=c(theta1=3, theta2=0, theta3=1))
+nmodel
+
+## evaluating our model
+# plot our fit as a line on the original data:
+f = function(x, theta) return(predict(nmodel, data.frame(conc=x)))
+x=seq(from=0.1,to=13,by=0.1)
+lines(x,f(x,coef(nmodel)))
+
+## checking model assumptions:
+# plot residuals against fitted values:
+#   note: fitted(nmodel) is the same as preds
+plot(fitted(nmodel), resid(nmodel), main="Fitted Values vs Residuals")
+abline(h=0, lty=3)
+qqnorm(resid(nmodel), main="QQplot: residuals")
+
+# make a prediction:
+#predict(nmodel, data.frame(conc=conc[1]))
+#density[1]
+
+preds = predict(nmodel, data.frame(conc=conc))
+plot(density, preds, xlab="Actual Density", ylab="Predicted Density")
+```
+
+```{r}
+# evaluating our model further...
+
+# estimated covariance matrix
+covEst = vcov(nmodel)
+covEst
+
+summary(nmodel)
+
+print("95% confidence interval for thetas:")
+confint(nmodel)
+
+# CI for prediction:
+# make a prediction:
+print("prediction with CI:")
+val = 4 # conc value for which we're predicting on
+predict(nmodel, data.frame(conc=val))
+
+#TODO: have to define function grad (slide 14 doesn't provide it)
+#f4=f(val, coef(nmodel))
+#gradvec = grad(val, coef(nmodel))
+#se = sqrt(t(gradvec)%*%vcov(nmodel)%*%gradvec)
+#lb = f4-qt(0.95, n-p)*se
+#ub = f4+qt(0.95, n-p)*se
+#c(lb,ub) # CI
+```
