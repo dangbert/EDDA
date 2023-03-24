@@ -40,7 +40,7 @@ figures. We utilize both functions throughout this assignment.
 
 <!--# See template_assign_edda.Rmd for full tips and info for formatting this document -->
 
-**1 a)**
+### 1 a)
 
 ```{r,fig.height=4}
 data = read.table("birthweight.txt", header=T)
@@ -54,10 +54,16 @@ pval = checkNorm(x, "Birthweight", unit="g")
 res = t.test(x, conf.level=0.96)
 print(sprintf("96%% confidence interval: [%.3f, %.3f]", res$conf.int[1], res$conf.int[2]))
 
+
+# (WRONG):
 # calculate min sample size needed
-tval = qt(0.98, length(x)-1)
-m = 50
-n = (tval * sd(x) / m) ** 2
+#tval = qt(0.98, length(x)-1)
+#m = 50
+#n = (tval * sd(x) / m) ** 2
+
+# CORRECTION for min-sample size calculation:
+#   (see Lecture 0&1 slide 48)
+n = (qnorm(0.98) * sqrt(var(x)) / 50)^2
 print(sprintf("min sample size, n = %.3f", n))
 ```
 
@@ -66,7 +72,7 @@ histogram, the straight line in the qqplot, and the shapiro-wilk
 normality test (having $p=0.900 > 0.05$).
 
 $$
-m = \frac{t*s}{\sqrt{n}} \rightarrow n = \left(\frac{t * s}{m}\right)^2
+m = \frac{z*s}{\sqrt{n}} \rightarrow n = \left(\frac{Z * s}{m}\right)^2
 $$
 
 The equation above, gives the sample size, $n$, needed for the
@@ -74,7 +80,7 @@ confidence interval to have a width of 100 (meaning $m=50$), where $t$
 is the t-score for the quantile 0.02 (such that both tails of the
 distribution have total area $1-0.96=0.04$). Our R code above computes
 n=`r sprintf("%.3f", n)`, which rounded up indicates the min sample size
-is $n=833$ (for a 96% CI of length at most 100).
+is $n=821$ (for a 96% CI of length at most 100).
 
 ```{r}
 B = 20000
@@ -98,7 +104,7 @@ expected).
 
 <!-- TODO: note that what we did above was a "percentile boostrap CI", maybe we should do the other version?  See Lecture2, slide 6+9-->
 
-**1 b)**
+### **1 b)**
 
 ```{r}
 res = t.test(x, mu=2800, alt="g")
@@ -127,7 +133,7 @@ The resulting p-value of `r sprintf("%.3f", res$p.value)` \< 0.05 also
 suggests there's sufficient evidence to support the claim that the mean
 birthweight $\mu > 2800$ grams.
 
-**1 c)**
+### **1 c)**
 
 ```{r,fig.height=4}
 B = 10000; n = length(x)
@@ -152,7 +158,7 @@ t-test is `r sprintf("%.3f", tPower)`, and the power of Wilcoxon sign
 test is `r sprintf("%.3f", signPower)`. So the t-test is slightly better
 fitted for use with this data (since the data is normal).
 
-**1 d)**
+### **1 d)**
 
 The equation below shows how to solve for $z_{\alpha/2}$ given the low
 bound (0.25) of a confidence interval for $\hat{p}$. The `pnorm`
@@ -185,8 +191,7 @@ large). So the original confidence interval was at a 98% confidence
 level, and in our code above we compute the
 `r sprintf("full confidence interval = [%.3f, %.3f]", ciLower, ciUpper)`
 
-**\
-1 e)**
+### 1 e)
 
 ```{r}
 res = prop.test(c(34, 28), c(95, 93)); printPval(res$p.value)
@@ -202,7 +207,7 @@ differs between the male and female populations.
 
 ## Exercise 2: Cholesterol
 
-**2 a)**
+### **2 a)**
 
 ```{r,echo=FALSE,fig.height=3,fig.width=3.2}
 #par(mfrow = c(1, 2))
@@ -238,7 +243,7 @@ cholesterol levels `Before` and `After8Weeks`.
 Based on the scatter plot there appears to be no inconsistencies
 (outliers) in the dataset.
 
-**2 b)**
+### **2 b)**
 
 In this experiment, the data are paired because a given index $i$ into
 the two variables, contains a value measured from the same experimental
@@ -266,7 +271,7 @@ cholesterol level.
 The Permutation test could also be used here because we have two paired
 samples, and no assumptions are needed.
 
-**2 c)**
+### **2 c)**
 
 Based on the sample of cholesterol after 8 weeks, we can compute a CI
 for the population's average using:
@@ -276,7 +281,7 @@ $$
 $$
 
 And given the uniform distribution $unif(3, \theta)$ has mean
-$\mu = \frac{\theta+3}{2} \rightarrow \theta = 2*\mu+3$, so we can
+$\mu = \frac{\theta+3}{2} \rightarrow \theta = 2*\mu-3$, so we can
 compute theta from our CI for $\bar{x}$.
 
 ```{r}
@@ -306,7 +311,7 @@ sprintf("max(data$After8weeks) = %.3f", max(data$After8weeks))
 sprintf("improved CI = [%.3f, %.3f]",  max(data$After8weeks), thetaHigh)
 ```
 
-**2 d)**
+### **2 d)**
 
 ```{=html}
 <!--#
@@ -361,7 +366,7 @@ also be from the same distribution. You could also run this test many
 times (similar to a boostrap test), for many generated samples $Y$,
 allowing you to more robustly verify the results.
 
-**2 e)**
+### **2 e)**
 
 ```{r}
 res = binom.test(sum(data$After8weeks >= 6), length(data$After8weeks), p=0.5, alt="less")
@@ -388,7 +393,7 @@ $\le 25\%$).
 
 ## Exercise 3: Diet
 
-**3 a)**
+### **3 a)**
 
 ```{r, fig.height=3}
 data = read.table("diet.txt", header=T)
@@ -441,7 +446,7 @@ The results of the sign test with p=`r sprintf("%.3f", res$p.value)` \<
 0.05 led us to reject the $H_0: m \le 0$ (that the median difference in
 weight before and after the diet is $\le 0$).
 
-**3 b)**
+### **3 b)**
 
 First we check for normality in the diet datasets:
 
@@ -479,7 +484,7 @@ The Kruskal-Wallis test can be applied here because $n_i > 5$ for all
 diet groups, and the test doesn't rely on normality so we don't have to
 be concerned about normality.
 
-**3 c**:
+### **3 c**:
 
 ```{r, fig.height=5.5}
 # diet, gender
@@ -511,12 +516,13 @@ In summary, there's sufficient data to suggest that diet has an effect
 on weightloss, but insufficient to suggest gender does, and gender and
 diet appear to have an interaction on weightlost.
 
-**3 e)**: Given the data, it seems more intuitive to us to use the
-approach from b). This is because the data has these three defining
-diets, and the one-way ANOVA model allows for a more fine-grained
-approach into checking factor effects. This is further confirmed by
-gender not being a statistically significant factor into weight loss, as
-per c).
+### **3 e)**
+
+Given the data, it seems more intuitive to us to use the approach from
+b). This is because the data has these three defining diets, and the
+one-way ANOVA model allows for a more fine-grained approach into
+checking factor effects. This is further confirmed by gender not being a
+statistically significant factor into weight loss, as per c).
 
 <!-- TODO: understand how to interpret 3 b) results, and then simply predict weight difference using mu and alphas... -->
 
@@ -533,7 +539,7 @@ intercept (the predicted diet1 weightlost).
 
 ## Exercise 4: Yield of Peas
 
-**4 a)**
+### **4 a)**
 
 ```{r}
 library(MASS)
@@ -560,13 +566,13 @@ head(random_df,4)
 tail(random_df,4)
 ```
 
-**4 b)**
+### **4 b)**
 
 ```{r,echo=FALSE}
 interaction.plot(data$N, data$block, data$yield, main="Plots Without Nitrogen vs With", ylab="Average Yield", xlab = "Nitrogen Presence", legend = TRUE, trace.label = "Block #")
 ```
 
-**4 c)**
+### **4 c)**
 
 <!--# reference: lecture 5, slide 28 -->
 
@@ -587,7 +593,7 @@ design experiments, and this dataset was the result of an incomplete
 block design (not all possible combinations of soil additives were
 applied to each farm plot).
 
-**4 d)**
+### **4 d)**
 
 ```{r}
 testModel = function(raov, coef="") {
@@ -624,7 +630,7 @@ was found to be insignificant). Therefore this model has a simpler level
 of complexity while still allowing the individual effects of N, P, and K
 to be evaluated.
 
-**4 e)**
+### **4 e)**
 
 <!--# Reference: lecture 6, slide 17 -->
 
